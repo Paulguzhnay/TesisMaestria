@@ -1,1 +1,14 @@
-<p>header works!</p>
+<header>
+  <nav>
+    <div class="logo">
+      <!-- Ruta correcta a la imagen en la carpeta 'assets' -->
+      <img src="assets/odooSH.png" alt="Odoo.sh">
+
+    </div>
+    <ul class="menu">
+      <li><a routerLink="/dashboard">Dashboard</a></li>
+      <li><a routerLink="/settings">Settings</a></li>
+      <li><button (click)="logout()">Logout</button></li>
+    </ul>
+  </nav>
+</header>
