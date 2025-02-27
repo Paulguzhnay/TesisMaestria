@@ -1,35 +1,28 @@
-form {
-  background-color: white;
+.settings-container {
   padding: 20px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
-  max-width: 600px;
-  margin: 20px auto;
 }
 
-label {
-  font-size: 16px;
-  display: block;
-  margin: 10px 0 5px;
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  max-width: 400px;
+  margin: auto;
 }
 
-input, select {
-  width: 100%;
-  padding: 10px;
-  margin-bottom: 20px;
-  border: 1px solid #bdc3c7;
+.settings-form label {
+  margin-top: 10px;
+  font-weight: bold;
+}
+
+.settings-form input {
+  padding: 8px;
   border-radius: 5px;
+  border: 1px solid #ccc;
+  margin-top: 5px;
+  margin-bottom: 15px; /* Añadido espacio entre los campos */
 }
 
-button {
-  background-color: #3498db;
-  color: white;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-button:hover {
-  background-color: #2980b9;
+.settings-form input:focus {
+  border-color: #3498db;
+  outline: none;
 }

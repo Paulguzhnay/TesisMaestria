@@ -1,1 +1,55 @@
-/* You can add global styles to this file, and also import other style files */
+/* Reset General */
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: Arial, sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Contenedor principal */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* Contenedor de contenido (excluye sidebar) */
+.main-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 250px;
+  background-color: #2c3e50;
+  color: white;
+  padding: 20px;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 10; /* Asegura que el sidebar esté encima de otros elementos */
+}
+
+.content {
+  margin-left: 250px; /* Para dejar espacio al sidebar */
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+}
+
+/* Footer al final */
+.footer {
+  background-color: #2c3e50;
+  color: white;
+  text-align: center;
+  padding: 10px 0;
+  width: 100%;
+  position: relative;
+  bottom: 0;
+}

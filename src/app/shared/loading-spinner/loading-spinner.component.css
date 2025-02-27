@@ -1,31 +1,14 @@
 .spinner {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  background-color: rgba(0, 0, 0, 0.3);
-}
-
-.loader {
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #3498db;
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  width: 48px; /* Aumentado el tamaño del spinner */
+  height: 48px; /* Aumentado el tamaño del spinner */
   border-radius: 50%;
-  width: 50px;
-  height: 50px;
-  animation: spin 2s linear infinite;
+  border-left-color: #3498db;
+  animation: spin 1.5s ease infinite; /* Ralentizado el giro para un efecto más fluido */
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-p {
-  color: #fff;
-  font-size: 18px;
-  margin-top: 10px;
+  to {
+    transform: rotate(360deg);
+  }
 }
