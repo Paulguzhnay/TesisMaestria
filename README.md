@@ -15,3 +15,6 @@ ng serve
 Instalar para el funcionamiento del drag and drop
 
 npm install @angular/cdk   
+
+npm install xterm xterm-addon-fit rxjs
+
