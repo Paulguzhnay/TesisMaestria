@@ -1,8 +1,8 @@
-import { Component, OnInit, ViewChild,ElementRef, OnDestroy } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, OnDestroy } from '@angular/core';
 import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import { WebSocketSubject } from 'rxjs/webSocket';
-import { Subscription, timer } from 'rxjs';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-shell',
@@ -10,80 +10,92 @@ import { Subscription, timer } from 'rxjs';
   templateUrl: './shell.component.html',
   styleUrls: ['./shell.component.css']
 })
-export class ShellComponent implements OnInit, OnDestroy{
-    @ViewChild('terminal', { static: true }) terminalDiv!: ElementRef;
-    terminal!: Terminal;
-    fitAddon!: FitAddon;
-    socket$!: WebSocketSubject<string>;
-    socketSubscription!: Subscription;
+export class ShellComponent implements OnInit, OnDestroy {
+  @ViewChild('terminal', { static: true }) terminalDiv!: ElementRef;
+  terminal!: Terminal;
+  fitAddon!: FitAddon;
+  socket$!: WebSocketSubject<string>;
+  socketSubscription!: Subscription;
+  inputBuffer: string = "";
 
+  ngOnInit(): void {
+    this.initTerminal();
+    this.connectWebSocket();
+  }
 
-    ngOnInit(): void {
-      this.initTerminal();
-      this.connectWebSocket();
-    }
+  initTerminal(): void {
+    this.terminal = new Terminal({
+      cursorBlink: true,
+      theme: { background: '#1e1e1e', foreground: '#ffffff' },
+      fontSize: 14,
+      rows: 30,
+      cols: 80
+    });
 
-initTerminal(): void {
-  this.terminal = new Terminal({
-    cursorBlink: true,
-    theme: { background: '#1e1e1e', foreground: '#ffffff' },
-    fontSize: 14,
-    rows: 30,
-    cols: 80
-  });
+    this.fitAddon = new FitAddon();
+    this.terminal.loadAddon(this.fitAddon);
+    this.terminal.open(this.terminalDiv.nativeElement);
+    this.fitAddon.fit();
 
-  this.fitAddon = new FitAddon();
-  this.terminal.loadAddon(this.fitAddon);
-  this.terminal.open(this.terminalDiv.nativeElement);
-  this.fitAddon.fit();
+    this.terminal.writeln('Bienvenido al Shell Terminal');
+    this.showPrompt();
 
-  this.terminal.onData((data) => {
-    if (this.socket$) {
-      this.socket$.next(data);  // Enviar el comando al backend
-    }
-  });
+    this.terminal.onKey((e) => {
+      const char = e.key;
 
-  this.terminal.writeln('Bienvenido al Shell Terminal');
-  this.terminal.write('$ ');
-
-  // Capturar la entrada del usuario (para escribir comandos)
-  this.terminal.onKey((e) => {
-    const char = e.key;
-
-    if (char === '\r') {
-      // Cuando presionas Enter, se envía el comando al backend
-      this.socket$.next('\n');
-      this.terminal.write('\r\n$ ');  // Muestra el prompt después de un comando
-    } else if (char === '\u007f' || char === 'Backspace') {  // Backspace
-      // Elimina un carácter de la terminal
-      const currentText = this.terminal.getSelection();
-      if (currentText.length > 0) {
-        this.terminal.write('\b \b');  // Borra el último carácter en la terminal
-      } else {
-        // Si no hay texto seleccionado, solo mueve el cursor hacia atrás
-        this.terminal.write('\b \b');
-      }
-    } else {
-      this.terminal.write(char);  // Escribir el carácter en la terminal
-    }
-  });
-}
-
-
-  connectWebSocket(): void {
-    this.socket$ = new WebSocketSubject('ws://localhost:8080/ws/shell');
-
-    this.socketSubscription = this.socket$.subscribe({
-      next: (message) => {
-        if (this.terminal) {
-          this.terminal.write('\r\n' + message + '\r\n$ '); // Muestra la salida con prompt
+      if (char === '\r') {  // Enter
+        this.terminal.write('\r\n');
+        this.socket$.next(this.inputBuffer);  // Enviar al backend
+        this.inputBuffer = "";
+      } else if (char === '\u007f' || char === 'Backspace') {  // Backspace
+        if (this.inputBuffer.length > 0) {
+          this.inputBuffer = this.inputBuffer.slice(0, -1);
+          this.terminal.write('\b \b');
         }
-      },
-      error: (err) => console.error('WebSocket error:', err),
-      complete: () => console.log('WebSocket cerrado')
+      } else {
+        this.inputBuffer += char;
+        this.terminal.write(char);
+      }
     });
   }
 
+  showPrompt(): void {
+    this.terminal.write('$ ');
+  }
+
+  connectWebSocket(): void {
+    this.socket$ = new WebSocketSubject({
+      url: 'ws://localhost:8080/ws/shell',
+      serializer: (msg: string) => msg,
+      deserializer: (event: MessageEvent) => event.data.toString(),
+      openObserver: {
+        next: () => {
+          console.log("WebSocket conectado.");
+          this.terminal.writeln('Conectado al shell.');
+          this.showPrompt();
+        }
+      },
+      closeObserver: {
+        next: () => {
+          console.log("WebSocket cerrado. Intentando reconectar...");
+          this.terminal.writeln('\nWebSocket cerrado. Reconectando...');
+          setTimeout(() => this.connectWebSocket(), 3000);
+        }
+      }
+    });
+
+    this.socketSubscription = this.socket$.subscribe({
+      next: (message) => {
+        console.log("Salida del shell:", message);
+        this.terminal.writeln(message);
+        this.showPrompt();
+      },
+      error: (err) => {
+        console.error('WebSocket error:', err);
+        setTimeout(() => this.connectWebSocket(), 3000);
+      }
+    });
+  }
 
   ngOnDestroy(): void {
     if (this.socketSubscription) {
@@ -93,7 +105,5 @@ initTerminal(): void {
       this.socket$.complete();
     }
   }
-  }
 
-
-
+}

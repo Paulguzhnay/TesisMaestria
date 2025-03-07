@@ -14,3 +14,8 @@
   height: 400px;
   width: 700px;
 }
+.xterm-helper-textarea,
+.xterm-char-measure-element {
+  display: none !important;
+}
+
