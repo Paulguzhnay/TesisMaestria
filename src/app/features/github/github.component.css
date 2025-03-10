@@ -1,36 +1,42 @@
 /* Estilo para el contenedor de las ramas */
 ul.branches {
-  list-style: none;  /* Quitar los puntos de la lista */
-  display: flex;     /* Mostrar las ramas en una fila */
-  overflow-x: auto;  /* Habilitar desplazamiento horizontal */
-  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: nowrap; /* Asegura que estén en una línea */
+  overflow-x: auto;
+  padding: 10px;
   margin: 0;
-  max-width: 100%;    /* No dejar que el contenedor se desborde */
-  white-space: nowrap; /* Evitar que las ramas se rompan */
+  max-width: 100%;
+  white-space: nowrap;
+  background: #f4f4f4;
 }
 
+/* Estilo individual para cada rama */
 ul.branches li {
   padding: 8px 15px;
   border: 1px solid #ddd;
-  margin-right: 10px; /* Espacio entre las ramas */
+  margin-right: 10px;
   border-radius: 5px;
-  cursor: pointer; /* Hacer que sea clickeable */
+  cursor: pointer;
   transition: background-color 0.3s;
+  flex-shrink: 0; /* Evita que los elementos se reduzcan */
 }
 
 ul.branches li:hover {
-  background-color: #f0f0f0; /* Resaltar la rama al pasar el mouse */
+  background-color: #e0e0e0;
 }
 
 /* Contenedor para las tarjetas de commits */
 .card-container {
   display: flex;
-  flex-wrap: wrap;       /* Permite que las tarjetas se acomoden en varias filas si es necesario */
+  flex-wrap: wrap;
   gap: 15px;
-  max-height: 400px;     /* Limitar la altura máxima */
-  overflow-y: auto;      /* Habilitar desplazamiento vertical */
-  margin-top: 20px;      /* Separar de la lista de ramas */
-  margin-bottom: 20px;   /* Separar de otros elementos */
+  max-height: 400px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 10px;
+  border: 1px solid #ccc;
+  background: #fafafa;
 }
 
 /* Estilo para las tarjetas de commits */
@@ -38,17 +44,17 @@ ul.branches li:hover {
   background-color: #f9f9f9;
   border: 1px solid #ddd;
   padding: 15px;
-  width: 200px;         /* Ancho fijo para las tarjetas */
+  width: 200px;
   border-radius: 5px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  margin-bottom: 10px;  /* Espacio entre las tarjetas */
+  margin-bottom: 10px;
 }
 
 /* Estilo para el contenido de cada tarjeta */
 .card p {
   font-size: 14px;
   margin: 0;
-  word-wrap: break-word; /* Asegura que el texto largo se ajuste */
-  max-height: 100px;     /* Limita la altura del contenido para evitar desbordamientos */
-  overflow: hidden;      /* Oculta el texto que excede el máximo */
+  word-wrap: break-word;
+  max-height: 100px;
+  overflow: hidden;
 }
