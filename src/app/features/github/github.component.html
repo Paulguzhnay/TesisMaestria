@@ -1,16 +1,18 @@
 <h2>Ramas de GitHub</h2>
 <ul>
-  <li *ngFor="let branch of branches" (click)="onSelectBranch(branch)">
+  <li *ngFor="let branch of branches">
     {{ branch }}
+    <br>
   </li>
 </ul>
 
 <h2>Commits recientes</h2>
-<!-- Mostrar la rama seleccionada -->
-<p *ngIf="selectedBranch">Rama seleccionada: {{ selectedBranch }}</p>
-
-<ul>
-  <li *ngFor="let commit of commits">
-    {{ commit }}
-  </li>
-</ul>
+<!-- Mostrar los commits de todas las ramas -->
+<div *ngFor="let branch of branches">
+  <h3>{{ branch }}</h3>
+  <div class="card-container">
+    <div class="card" *ngFor="let commit of commitsByBranch[branch]">
+      <p>{{ commit }}</p>
+    </div>
+  </div>
+</div>
