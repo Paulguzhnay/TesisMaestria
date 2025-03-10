@@ -3,10 +3,7 @@ package ec.edu.ups.Backend.controller;
 import ec.edu.ups.Backend.service.GithubService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -19,7 +16,17 @@ public class GithubController {
     private GithubService githubService;
 
     @GetMapping("/branches")
-    public List<String> getBranches() {
-        return githubService.getBranches();
+    public ResponseEntity<List<String>> getBranches() {
+        List<String> branches = githubService.getBranches();
+        return ResponseEntity.ok(branches); // Devolver ramas
+    }
+
+    @GetMapping("/commits/{branch}")
+    public ResponseEntity<List<String>> getCommits(@PathVariable String branch) {
+        List<String> commits = githubService.getCommitsByBranch(branch);
+        if (commits.isEmpty()) {
+            return ResponseEntity.notFound().build(); // Si no hay commits
+        }
+        return ResponseEntity.ok(commits); // Si hay commits
     }
 }
