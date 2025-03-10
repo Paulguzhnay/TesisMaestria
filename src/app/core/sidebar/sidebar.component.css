@@ -8,6 +8,7 @@
   top: 0;
   left: 0;
   z-index: 10; /* Añadido para asegurar que el sidebar se apile sobre otros elementos */
+
 }
 
 .sidebar ul {
@@ -20,6 +21,7 @@
   border-bottom: 1px solid #34495e;
   cursor: pointer;
   transition: background-color 0.3s ease; /* Añadido para transiciones suaves al pasar el ratón */
+
 }
 
 .sidebar ul li:hover {

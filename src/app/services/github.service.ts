@@ -1,14 +1,21 @@
 import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
 })
 export class GithubService {
-  private apiUrl = 'http://localhost:8080/api/github/branches'; // Ruta al backend
+  private apiUrlBranches = 'http://localhost:8080/api/github/branches';
+  private apiUrlCommits = 'http://localhost:8080/api/github/commits/';
 
   constructor(private http: HttpClient) {}
 
   getBranches(): Observable<string[]> {
-    return this.http.get<string[]>(this.apiUrl);
+    return this.http.get<string[]>(this.apiUrlBranches);
+  }
+
+  getCommits(branch: string): Observable<string[]> {
+    return this.http.get<string[]>(`${this.apiUrlCommits}${branch}`);
   }
 }
