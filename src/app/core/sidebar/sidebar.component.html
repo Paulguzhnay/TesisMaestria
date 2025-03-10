@@ -1,6 +1,6 @@
 <aside class="sidebar">
   <ul cdkDropList (cdkDropListDropped)="drop($event)">
-    <li *ngFor="let item of menuItems; let i = index" cdkDrag>
+    <li *ngFor="let item of menuItems" cdkDrag>
       <a [routerLink]="item.path">{{ item.name }}</a>
     </li>
   </ul>

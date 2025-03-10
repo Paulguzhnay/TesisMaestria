@@ -12,7 +12,8 @@ export class SidebarComponent {
     { name: 'Dashboard', path: '/dashboard' },
     { name: 'Settings', path: '/settings' },
     { name: 'Reports', path: '/reports' },
-    { name: 'Users', path: '/users' }
+    { name: 'Users', path: '/users' },
+    { name: 'GitHub', path: '/github' }
   ];
 
   drop(event: CdkDragDrop<string[]>) {
