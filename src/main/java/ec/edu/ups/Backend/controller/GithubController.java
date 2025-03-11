@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/github")
@@ -29,4 +30,27 @@ public class GithubController {
         }
         return ResponseEntity.ok(commits); // Si hay commits
     }
+
+
+    @PostMapping("/pull")
+    public ResponseEntity<String> pull() {
+        return ResponseEntity.ok(githubService.pull());
+    }
+
+    @PostMapping("/push")
+    public ResponseEntity<String> push() {
+        return ResponseEntity.ok(githubService.push());
+    }
+
+    @PostMapping("/merge")
+    public ResponseEntity<String> mergeBranches(@RequestBody Map<String, String> request) {
+        String fromBranch = request.get("fromBranch");
+        System.out.println("********************"+fromBranch);
+        String toBranch = request.get("toBranch");
+        System.out.println("********************"+toBranch);
+        System.out.println("********************" + githubService.mergeBranches(fromBranch, toBranch));
+        return ResponseEntity.ok(githubService.mergeBranches(fromBranch, toBranch));
+    }
+
+
 }

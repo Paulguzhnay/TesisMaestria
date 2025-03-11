@@ -1,11 +1,19 @@
 package ec.edu.ups.Backend.service;
 
+import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.api.MergeResult;
+import org.eclipse.jgit.api.errors.GitAPIException;
+import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
 import org.json.JSONArray;
 import org.json.JSONObject;
+
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -66,4 +74,78 @@ public class GithubService {
 
         return branches;
     }
+
+    //--------
+    @Value("${github.local.repo.path}") // Ruta donde está clonado el repo
+    private String localRepoPath;
+
+    @Value("${github.username}")
+    private String gitUsername;
+
+    @Value("${github.token}") // Usa un token de acceso personal en lugar de contraseña
+    private String gitToken;
+
+    public String pull() {
+        try {
+            Git git = Git.open(new File(localRepoPath));
+            git.pull()
+                    .setCredentialsProvider(new UsernamePasswordCredentialsProvider(gitUsername, gitToken))
+                    .call();
+            return "Pull exitoso";
+        } catch (GitAPIException | IOException e) {
+            e.printStackTrace();
+            return "Error al hacer pull: " + e.getMessage();
+        }
+    }
+
+    public String push() {
+        try {
+            Git git = Git.open(new File(localRepoPath));
+            git.push()
+                    .setCredentialsProvider(new UsernamePasswordCredentialsProvider(gitUsername, gitToken))
+                    .call();
+            return "Push exitoso";
+        } catch (GitAPIException | IOException e) {
+            e.printStackTrace();
+            return "Error al hacer push: " + e.getMessage();
+        }
+    }
+
+    //-------------
+    public String mergeBranches(String fromBranch, String toBranch) {
+        try {
+            Git git = Git.open(new File(localRepoPath));
+
+            // Traer actualizaciones del remoto antes del merge
+            git.fetch().setCredentialsProvider(new UsernamePasswordCredentialsProvider(gitUsername, gitToken)).call();
+
+            // Verificar si las ramas existen
+            if (git.getRepository().resolve(fromBranch) == null) {
+                return "Error: La rama " + fromBranch + " no existe.";
+            }
+            if (git.getRepository().resolve(toBranch) == null) {
+                return "Error: La rama " + toBranch + " no existe.";
+            }
+
+            // Checkout a la rama destino
+            git.checkout().setName(toBranch).call();
+
+            // Merge de la rama origen
+            MergeResult mergeResult = git.merge()
+                    .include(git.getRepository().resolve(fromBranch))
+                    .setCommit(true)
+                    .call();
+
+            if (mergeResult.getMergeStatus().isSuccessful()) {
+                return "Merge exitoso de " + fromBranch + " en " + toBranch;
+            } else {
+                return "Conflicto al hacer merge: " + mergeResult.getMergeStatus();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "Error en el merge: " + e.getMessage();
+        }
+    }
+
+
 }
