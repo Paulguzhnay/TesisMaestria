@@ -37,7 +37,7 @@ export class GithubComponent implements OnInit {
           data => {
             this.commitsByBranch[branch] = data; // Almacena los commits por rama
           },
-          error => console.error('Error al obtener los commits:', error)
+          error => console.error('Error al obtener los commits :', error)
         );
     });
   }
