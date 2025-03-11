@@ -1,13 +1,17 @@
 <h2>Ramas de GitHub</h2>
 <div class="branches-container">
   <ul class="branches">
-    <li *ngFor="let branch of branches">
+    <li *ngFor="let branch of branches"
+        draggable="true"
+        (dragstart)="dragStart(branch)"
+        (drop)="drop(branch)"
+        (dragover)="$event.preventDefault()">
       {{ branch }}
     </li>
   </ul>
 </div>
 
-<h2>Commits recientes </h2>
+<h2>Commits recientes</h2>
 <div class="commits-container">
   <div *ngFor="let branch of branches">
     <h3>{{ branch }}</h3>
@@ -18,3 +22,6 @@
     </div>
   </div>
 </div>
+
+<button (click)="pull()">Pull</button>
+<button (click)="push()">Push</button>
