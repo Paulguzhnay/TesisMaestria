@@ -22,24 +22,38 @@ constructor (private odooService: OdooService){}
 addOdooInstance() {
   const instanceName = prompt("Ingrese el nombre de la nueva instancia de Odoo:");
   if (instanceName) {
-    this.odooService.createOdooInstance(instanceName).subscribe(response => {
-      alert(response.message); // Muestra el mensaje que recibimos del backend
-      
-      // Extraer la URL correctamente
-      const odooUrl = response.message.split('URL: ')[1];  // Obtener la URL de la respuesta
+    // Abrimos una nueva pestaña con un mensaje de carga
+    const newTab = window.open("", "_blank");
+    if (newTab) {
+      newTab.document.write("<p style='font-size:20px; text-align:center;'>Creando la instancia de Odoo... Por favor, espere.</p>");
+    }
 
-      // Verificar si la URL es válida antes de abrirla
-      if (odooUrl) {
-        console.log("Redirigiendo a: ", odooUrl);  // Verifica que la URL sea correcta
-        window.open(odooUrl, '_blank');  // Abre Odoo en una nueva ventana
+    this.odooService.createOdooInstance(instanceName).subscribe(response => {
+      alert(response.message); // Mostramos el mensaje de éxito
+
+      if (response.url) {
+        console.log("Redirigiendo a: ", response.url);
+        if (newTab) {
+          newTab.location.href = response.url; // Redirigir la pestaña ya abierta a la URL de Odoo
+        } else {
+          alert("No se pudo abrir automáticamente. Acceda a: " + response.url);
+        }
       } else {
         alert("Error: La URL de Odoo no está disponible.");
       }
 
-      // Agregar la nueva rama
+      // Agregar la nueva rama en la UI
       this.branches.push({ name: instanceName, category: 'DEVELOPMENT', status: 'blue' });
     });
   }
 }
+
+
+
+
+
+
+
+
 
 }
