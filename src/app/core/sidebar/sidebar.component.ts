@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
-import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
+import { OdooService } from '../../services/odoo.service';
+
 
 @Component({
   selector: 'app-sidebar',
@@ -8,21 +9,37 @@ import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
   styleUrls: ['./sidebar.component.css']
 })
 export class SidebarComponent {
-  menuItems = [
-    { name: 'Dashboard', path: '/dashboard' },
-    { name: 'Settings', path: '/settings' },
-    { name: 'Reports', path: '/reports' },
-    { name: 'Users', path: '/users' },
-    { name: 'GitHub', path: '/github' }
+  branches = [
+    { name: 'master', category: 'PRODUCTION', status: 'green' },
+    { name: 'saas-24', category: 'STAGING', status: 'green' },
+ 
+    { name: 'master ', category: 'DEVELOPMENT', status: 'blue' }
   ];
 
-  drop(event: CdkDragDrop<string[]>) {
-    moveItemInArray(this.menuItems, event.previousIndex, event.currentIndex);
-    this.saveOrder();
-  }
+constructor (private odooService: OdooService){}
 
-  saveOrder() {
-    // Aquí deberíamos llamar a un servicio para guardar el nuevo orden en el backend
-    console.log('Nuevo orden guardado:', this.menuItems);
+
+addOdooInstance() {
+  const instanceName = prompt("Ingrese el nombre de la nueva instancia de Odoo:");
+  if (instanceName) {
+    this.odooService.createOdooInstance(instanceName).subscribe(response => {
+      alert(response.message); // Muestra el mensaje que recibimos del backend
+      
+      // Extraer la URL correctamente
+      const odooUrl = response.message.split('URL: ')[1];  // Obtener la URL de la respuesta
+
+      // Verificar si la URL es válida antes de abrirla
+      if (odooUrl) {
+        console.log("Redirigiendo a: ", odooUrl);  // Verifica que la URL sea correcta
+        window.open(odooUrl, '_blank');  // Abre Odoo en una nueva ventana
+      } else {
+        alert("Error: La URL de Odoo no está disponible.");
+      }
+
+      // Agregar la nueva rama
+      this.branches.push({ name: instanceName, category: 'DEVELOPMENT', status: 'blue' });
+    });
   }
+}
+
 }
