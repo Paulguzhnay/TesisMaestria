@@ -1,4 +1,5 @@
 package ec.edu.ups.Backend.controller;
+
 import ec.edu.ups.Backend.service.DockerService;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,14 +14,34 @@ public class OdooController {
     private DockerService dockerService;
 
     @PostMapping("/create")
+
     public Map<String, String> createInstance(@RequestBody InstanceRequest request) {
-        String message = dockerService.createOdooInstance(request.getName());
+        String url = dockerService.createOdooInstance(request.getName());
 
-        // Crear un objeto JSON en formato Map
+        // Verificar si hubo error
         Map<String, String> response = new HashMap<>();
-        response.put("message", message);
-
+        if (url.startsWith("http")) {
+            response.put("message", "Instancia de Odoo creada con éxito");
+            response.put("url", url);  // Enviar la URL separada en la respuesta
+        } else {
+            response.put("message", url); // Enviar el mensaje de error
+        }
         return response;
+    }
+
+
+    private Map<String, String> parseJsonToMap(String json) {
+        Map<String, String> map = new HashMap<>();
+        json = json.replaceAll("[{}\"]", ""); // Eliminar llaves y comillas
+        String[] pairs = json.split(",");
+
+        for (String pair : pairs) {
+            String[] keyValue = pair.split(":");
+            if (keyValue.length == 2) {
+                map.put(keyValue[0].trim(), keyValue[1].trim());
+            }
+        }
+        return map;
     }
 
     static class InstanceRequest {

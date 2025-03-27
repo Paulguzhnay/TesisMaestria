@@ -5,6 +5,8 @@ import org.springframework.stereotype.Service;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 public class DockerService {
@@ -32,7 +34,7 @@ public class DockerService {
 
     public String createOdooInstance(String instanceName) {
         try {
-            // Crear los nombres completos para los contenedores
+            // Crear nombres de los contenedores
             String dbContainerName = containerPrefix + instanceName + "_db";
             String odooContainerName = containerPrefix + instanceName;
 
@@ -48,27 +50,29 @@ public class DockerService {
                     odooContainerName, dockerNetwork, dbContainerName, postgresUser, postgresPassword, postgresDb, odooImage
             );
 
-            // Ejecutar los comandos y capturar la salida
+            // Ejecutar comandos
             Process dbProcess = Runtime.getRuntime().exec(dbCommand);
-            String dbOutput = getProcessOutput(dbProcess);
             int dbExitCode = dbProcess.waitFor();
             if (dbExitCode != 0) {
-                return "Error al crear el contenedor de la base de datos: " + dbOutput;
+                return "Error al crear el contenedor de la base de datos";
             }
 
             Process odooProcess = Runtime.getRuntime().exec(odooCommand);
-            String odooOutput = getProcessOutput(odooProcess);
             int odooExitCode = odooProcess.waitFor();
             if (odooExitCode != 0) {
-                return "Error al crear el contenedor de Odoo: " + odooOutput;
+                return "Error al crear el contenedor de Odoo";
             }
 
-            // Devolver la URL para que el frontend pueda redirigir al usuario
-            return "Instancia de Odoo creada con éxito: " + instanceName + " - URL: http://localhost:8069";
+            // **IMPORTANTE**: Retornar solo la URL en un JSON válido
+            return "http://localhost:8069";
+
         } catch (IOException | InterruptedException e) {
             return "Error al crear la instancia de Odoo: " + e.getMessage();
         }
     }
+
+
+
 
 
     // Método para capturar la salida del proceso
