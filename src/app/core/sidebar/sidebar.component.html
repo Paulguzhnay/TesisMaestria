@@ -1,28 +1,23 @@
-<div class="sidebar">
-    <input type="text" placeholder="Filter branches..." />
-  
-    <div class="category">
-      <span>PRODUCTION</span>
-      <div *ngFor="let branch of branches" class="branch" [ngClass]="branch.status">
-        {{ branch.name }}
-      </div>
-      <button (click)="addOdooInstance()">+</button>
-    </div>
-  
-    <div class="category">
-      <span>STAGING</span>
-      <div *ngFor="let branch of branches" class="branch" [ngClass]="branch.status">
-        {{ branch.name }}
-      </div>
-      <button (click)="addOdooInstance()">+</button>
-    </div>
-
-    <div class="category">
-        <span>DEVELOPMENT</span>
-        <div *ngFor="let branch of branches" class="branch" [ngClass]="branch.status">
-          {{ branch.name }}
-        </div>
-        <button (click)="addOdooInstance()">+</button>
-      </div>
+<div class="category">
+  <span>PRODUCTION</span>
+  <div *ngFor="let branch of productionBranches" class="branch" [ngClass]="branch.status">
+      <a [href]="branch.url" target="_blank">{{ branch.name }}</a>
   </div>
-  
+  <button (click)="addOdooInstance('PRODUCTION')">+</button>
+</div>
+
+<div class="category">
+  <span>STAGING</span>
+  <div *ngFor="let branch of stagingBranches" class="branch" [ngClass]="branch.status">
+      <a [href]="branch.url" target="_blank">{{ branch.name }}</a>
+  </div>
+  <button (click)="addOdooInstance('STAGING')">+</button>
+</div>
+
+<div class="category">
+  <span>DEVELOPMENT</span>
+  <div *ngFor="let branch of developmentBranches" class="branch" [ngClass]="branch.status">
+      <a [href]="branch.url" target="_blank">{{ branch.name }}</a>
+  </div>
+  <button (click)="addOdooInstance('DEVELOPMENT')">+</button>
+</div>

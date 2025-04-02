@@ -26,3 +26,19 @@ button {
   padding: 5px 10px;
   cursor: pointer;
 }
+
+
+.branch {
+  padding: 5px;
+  border-radius: 4px;
+  margin-top: 5px;
+  background: white; /* Fondo blanco */
+  color: black; /* Texto en negro para mejor contraste */
+  text-align: center; /* Centrar el texto */
+  font-weight: bold; /* Hacer el texto más visible */
+  cursor: pointer; /* Indicar que es clickeable */
+}
+
+.branch.green { background: white; color: black; }
+.branch.yellow { background: white; color: black; }
+.branch.blue { background: white; color: black; }
