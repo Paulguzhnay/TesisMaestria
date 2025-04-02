@@ -1,12 +1,12 @@
 package ec.edu.ups.Backend.service;
 
+import ec.edu.ups.Backend.model.OdooInstance;
+import ec.edu.ups.Backend.repository.OdooInstanceRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
+import java.util.Optional;
 
 @Service
 public class DockerService {
@@ -32,57 +32,64 @@ public class DockerService {
     @Value("${docker.container.prefix}")
     private String containerPrefix;
 
-    public String createOdooInstance(String instanceName) {
-        try {
-            // Crear nombres de los contenedores
-            String dbContainerName = containerPrefix + instanceName + "_db";
-            String odooContainerName = containerPrefix + instanceName;
+    private final OdooInstanceRepository odooInstanceRepository;
 
-            // Comando para crear el contenedor de la base de datos
+    public DockerService(OdooInstanceRepository odooInstanceRepository) {
+        this.odooInstanceRepository = odooInstanceRepository;
+    }
+
+    public String createOdooInstance(String instanceName, String category) {
+        try {
+            int port = getPortByCategory(category);
+            if (port == -1) {
+                return "Error: Categoría no válida.";
+            }
+
+            String dbContainerName = containerPrefix + category + "_" + instanceName + "_db";
+            String odooContainerName = containerPrefix + category + "_" + instanceName;
+            String url = "http://localhost:" + port + "/web/database/selector";
+
             String dbCommand = String.format(
                     "docker run -d --name %s --network %s -e POSTGRES_USER=%s -e POSTGRES_PASSWORD=%s -e POSTGRES_DB=%s %s",
                     dbContainerName, dockerNetwork, postgresUser, postgresPassword, postgresDb, postgresImage
             );
 
-            // Comando para crear el contenedor de Odoo
             String odooCommand = String.format(
-                    "docker run -d --name %s --network %s -e HOST=%s -e USER=%s -e PASSWORD=%s -e DB=%s -p 8069:8069 %s",
-                    odooContainerName, dockerNetwork, dbContainerName, postgresUser, postgresPassword, postgresDb, odooImage
+                    "docker run -d --name %s --network %s -e HOST=%s -e USER=%s -e PASSWORD=%s -e DB=%s -p %d:8069 %s",
+                    odooContainerName, dockerNetwork, dbContainerName, postgresUser, postgresPassword, postgresDb, port, odooImage
             );
 
-            // Ejecutar comandos
-            Process dbProcess = Runtime.getRuntime().exec(dbCommand);
-            int dbExitCode = dbProcess.waitFor();
-            if (dbExitCode != 0) {
-                return "Error al crear el contenedor de la base de datos";
+            if (!executeCommand(dbCommand) || !executeCommand(odooCommand)) {
+                return "Error al crear la instancia.";
             }
 
-            Process odooProcess = Runtime.getRuntime().exec(odooCommand);
-            int odooExitCode = odooProcess.waitFor();
-            if (odooExitCode != 0) {
-                return "Error al crear el contenedor de Odoo";
-            }
+            // **Guardar la instancia en la base de datos**
+            OdooInstance instance = new OdooInstance(instanceName, category, url);
+            odooInstanceRepository.save(instance);
 
-            // **IMPORTANTE**: Retornar solo la URL en un JSON válido
-            return "http://localhost:8069";
+            return url;
 
-        } catch (IOException | InterruptedException e) {
-            return "Error al crear la instancia de Odoo: " + e.getMessage();
+        } catch (Exception e) {
+            return "Error al crear la instancia: " + e.getMessage();
         }
     }
 
+    public List<OdooInstance> getAllInstances() {
+        return odooInstanceRepository.findAll();
+    }
 
-
-
-
-    // Método para capturar la salida del proceso
-    private String getProcessOutput(Process process) throws IOException {
-        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-        StringBuilder output = new StringBuilder();
-        String line;
-        while ((line = reader.readLine()) != null) {
-            output.append(line).append("\n");
+    private int getPortByCategory(String category) {
+        switch (category.toLowerCase()) {
+            case "development": return 8070;
+            case "staging": return 8071;
+            case "production": return 8069;
+            default: return -1;
         }
-        return output.toString();
+    }
+
+    private boolean executeCommand(String command) throws IOException, InterruptedException {
+        Process process = Runtime.getRuntime().exec(command);
+        int exitCode = process.waitFor();
+        return exitCode == 0;
     }
 }
