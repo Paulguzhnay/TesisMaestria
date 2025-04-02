@@ -4,6 +4,7 @@ import ec.edu.ups.Backend.model.OdooInstance;
 import ec.edu.ups.Backend.repository.OdooInstanceRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import jakarta.annotation.PostConstruct;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
@@ -38,6 +39,7 @@ public class DockerService {
         this.odooInstanceRepository = odooInstanceRepository;
     }
 
+    // ✅ Método para crear una nueva instancia de Odoo con persistencia
     public String createOdooInstance(String instanceName, String category) {
         try {
             int port = getPortByCategory(category);
@@ -49,21 +51,32 @@ public class DockerService {
             String odooContainerName = containerPrefix + category + "_" + instanceName;
             String url = "http://localhost:" + port + "/web/database/selector";
 
+            // ✅ Usar volúmenes persistentes
+            String dbVolume = "odoo_" + instanceName + "_db_data";
+            String odooVolume = "odoo_" + instanceName + "_data";
+
             String dbCommand = String.format(
-                    "docker run -d --name %s --network %s -e POSTGRES_USER=%s -e POSTGRES_PASSWORD=%s -e POSTGRES_DB=%s %s",
-                    dbContainerName, dockerNetwork, postgresUser, postgresPassword, postgresDb, postgresImage
+                    "docker run -d --name %s --network %s " +
+                            "-e POSTGRES_USER=%s -e POSTGRES_PASSWORD=%s -e POSTGRES_DB=%s " +
+                            "-v %s:/var/lib/postgresql/data " +
+                            "%s",
+                    dbContainerName, dockerNetwork, postgresUser, postgresPassword, postgresDb, dbVolume, postgresImage
             );
 
             String odooCommand = String.format(
-                    "docker run -d --name %s --network %s -e HOST=%s -e USER=%s -e PASSWORD=%s -e DB=%s -p %d:8069 %s",
-                    odooContainerName, dockerNetwork, dbContainerName, postgresUser, postgresPassword, postgresDb, port, odooImage
+                    "docker run -d --name %s --network %s " +
+                            "-e HOST=%s -e USER=%s -e PASSWORD=%s -e DB=%s " +
+                            "-p %d:8069 " +
+                            "-v %s:/var/lib/odoo " +
+                            "%s",
+                    odooContainerName, dockerNetwork, dbContainerName, postgresUser, postgresPassword, postgresDb, port, odooVolume, odooImage
             );
 
             if (!executeCommand(dbCommand) || !executeCommand(odooCommand)) {
                 return "Error al crear la instancia.";
             }
 
-            // **Guardar la instancia en la base de datos**
+            // ✅ Guardar la instancia en la base de datos
             OdooInstance instance = new OdooInstance(instanceName, category, url);
             odooInstanceRepository.save(instance);
 
@@ -74,8 +87,34 @@ public class DockerService {
         }
     }
 
-    public List<OdooInstance> getAllInstances() {
-        return odooInstanceRepository.findAll();
+    // ✅ Método para recuperar las instancias al iniciar el backend
+    @PostConstruct
+    public void restartOdooInstances() {
+        List<OdooInstance> instances = odooInstanceRepository.findAll();
+        for (OdooInstance instance : instances) {
+            restartInstance(instance);
+        }
+    }
+
+    private void restartInstance(OdooInstance instance) {
+        String dbContainerName = containerPrefix + instance.getCategory() + "_" + instance.getName() + "_db";
+        String odooContainerName = containerPrefix + instance.getCategory() + "_" + instance.getName();
+        int port = getPortByCategory(instance.getCategory());
+
+        if (port == -1) return;
+
+        // Verificar si los contenedores ya están corriendo
+        if (isContainerRunning(dbContainerName) && isContainerRunning(odooContainerName)) {
+            return;
+        }
+
+        try {
+            // Reiniciar los contenedores usando los volúmenes existentes
+            executeCommand("docker start " + dbContainerName);
+            executeCommand("docker start " + odooContainerName);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private int getPortByCategory(String category) {
@@ -91,5 +130,20 @@ public class DockerService {
         Process process = Runtime.getRuntime().exec(command);
         int exitCode = process.waitFor();
         return exitCode == 0;
+    }
+
+    private boolean isContainerRunning(String containerName) {
+        try {
+            Process process = Runtime.getRuntime().exec("docker inspect -f '{{.State.Running}}' " + containerName);
+            process.waitFor();
+            byte[] output = process.getInputStream().readAllBytes();
+            return new String(output).trim().equals("true");
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public List<OdooInstance> getAllInstances() {
+        return odooInstanceRepository.findAll();
     }
 }
