@@ -2,6 +2,7 @@ package ec.edu.ups.Backend.controller;
 
 import ec.edu.ups.Backend.model.OdooInstance;
 import ec.edu.ups.Backend.service.DockerService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import java.util.HashMap;
@@ -57,5 +58,18 @@ public class OdooController {
     @GetMapping("/instances")
     public List<OdooInstance> getInstances() {
         return dockerService.getAllInstances();
+    }
+
+    @PostMapping("/backup")
+    public ResponseEntity<String> backupInstance(@RequestBody Map<String, String> request) {
+        String instanceName = request.get("name");
+        String category = request.get("category");
+
+        boolean success = dockerService.backupOdooInstance(instanceName, category);
+        if (success) {
+            return ResponseEntity.ok("Backup realizado con éxito para la instancia: " + instanceName);
+        } else {
+            return ResponseEntity.status(500).body("Error al realizar el backup de la instancia: " + instanceName);
+        }
     }
 }
