@@ -1,0 +1,41 @@
+<table>
+  <thead>
+    <tr>
+      <th>Archivo</th>
+      <th>Time (UTC)</th>
+      <th>Branch</th>
+      <th>Version</th>
+      <th>Type</th>
+      <th>Revision</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    <ng-container *ngFor="let group of groupedBackups">
+      
+      <!-- 🕒 Fila encabezado del grupo -->
+      <tr class="group-header">
+        <td colspan="7">
+          🕒 Backup del: {{ formatTimestamp(group.timestamp) }}
+        </td>
+      </tr>
+
+      <!-- Fila de cada archivo en el grupo -->
+      <tr *ngFor="let backup of group.backups" [ngClass]="group.colorClass">
+        <td>
+          {{ backup.name.includes('db_backup') ? '📦 Base de Datos' : '📁 Odoo Archivos' }}<br>
+          <small>{{ backup.name }}</small>
+        </td>
+        <td>{{ backup.time }}</td>
+        <td>{{ backup.branch }}</td>
+        <td>{{ backup.version }}</td>
+        <td>{{ backup.type }}</td>
+        <td>{{ backup.revision }}</td>
+        <td>
+          <button (click)="downloadBackup(backup)">Download</button>
+          <button (click)="restoreBackup(backup)">Restore</button>
+        </td>
+      </tr>
+    </ng-container>
+  </tbody>
+</table>
