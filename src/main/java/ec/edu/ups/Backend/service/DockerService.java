@@ -6,15 +6,20 @@ import ec.edu.ups.Backend.repository.OdooInstanceRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import jakarta.annotation.PostConstruct;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
+
 
 @Service
 public class DockerService {
@@ -49,7 +54,7 @@ public class DockerService {
         this.odooInstanceRepository = odooInstanceRepository;
     }
 
-    // ✅ Método para crear una nueva instancia de Odoo con persistencia
+    // Método para crear una nueva instancia de Odoo con persistencia
     public String createOdooInstance(String instanceName, String category) {
         try {
             int port = getPortByCategory(category);
@@ -62,7 +67,7 @@ public class DockerService {
             String odooContainerName = containerPrefix + category + "_" + instanceName;
             String url = "http://localhost:" + port + "/web/database/selector";
 
-            // ✅ Usar volúmenes persistentes
+            //  Usar volúmenes persistentes
             String dbVolume = "odoo_" + instanceName + "_db_data";
             String odooVolume = "odoo_" + instanceName + "_data";
 
@@ -87,7 +92,7 @@ public class DockerService {
                 return "Error al crear la instancia.";
             }
 
-            // ✅ Guardar la instancia en la base de datos
+            //  Guardar la instancia en la base de datos
             OdooInstance instance = new OdooInstance(instanceName, category, url);
             odooInstanceRepository.save(instance);
 
@@ -98,7 +103,7 @@ public class DockerService {
         }
     }
 
-    // ✅ Método para recuperar las instancias al iniciar el backend
+    // Método para recuperar las instancias al iniciar el backend
     @PostConstruct
     public void restartOdooInstances() {
         List<OdooInstance> instances = odooInstanceRepository.findAll();
@@ -145,14 +150,18 @@ public class DockerService {
 
     private boolean isContainerRunning(String containerName) {
         try {
-            Process process = Runtime.getRuntime().exec("docker inspect -f '{{.State.Running}}' " + containerName);
+            Process process = Runtime.getRuntime().exec("docker inspect -f \"{{.State.Running}}\" " + containerName);
             process.waitFor();
             byte[] output = process.getInputStream().readAllBytes();
-            return new String(output).trim().equals("true");
+            String result = new String(output).trim();
+            System.out.println("🧐 Estado del contenedor " + containerName + ": " + result);
+            return result.equals("true");
         } catch (Exception e) {
+            e.printStackTrace();
             return false;
         }
     }
+
 
     public List<OdooInstance> getAllInstances() {
         return odooInstanceRepository.findAll();
@@ -196,8 +205,19 @@ public class DockerService {
     }
 
     private boolean executeCommand(String[] command) throws IOException, InterruptedException {
-        Process process = new ProcessBuilder(command).start();
+        ProcessBuilder builder = new ProcessBuilder(command);
+        builder.redirectErrorStream(true); // Mezclar stderr con stdout
+        Process process = builder.start();
+
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                System.out.println("[OUTPUT] " + line);
+            }
+        }
+
         int exitCode = process.waitFor();
+        System.out.println("↪️ Exit code: " + exitCode);
         return exitCode == 0;
     }
 
@@ -245,6 +265,7 @@ public class DockerService {
     public String createBackup(String instanceName, String category) {
         String dbContainerName = getContainerName(instanceName, category, true);
         String odooContainerName = getContainerName(instanceName, category, false);
+        String dbName = instanceName; // Usar nombre de instancia como nombre de BD
 
         System.out.println("🔍 Buscando contenedores...");
         System.out.println("📦 Base de Datos: " + dbContainerName);
@@ -260,39 +281,48 @@ public class DockerService {
         }
 
         String timestamp = String.valueOf(System.currentTimeMillis());
-        String dbBackupFilePath = backupDir + File.separator + "db_backup_" + timestamp + ".sql";
-        String odooBackupFilePath = backupDir + File.separator + "odoo_data_" + timestamp + ".tar.gz";
-        String finalBackupFile = backupDir + File.separator + "Backup-" + timestamp + ".zip";
+        String dbBackupFilePath = backupDir + File.separator + String.format("db_backup_%s_%s_%s.dump", category.toUpperCase(), instanceName, timestamp);
+        System.out.println("dbBackupFilePath: "+dbBackupFilePath+" Fin");
+        String odooBackupFilePath = backupDir + File.separator + String.format("odoo_data_%s_%s_%s.tar.gz", category.toUpperCase(), instanceName, timestamp);
+        System.out.println("odooBackupFilePath: "+odooBackupFilePath+" Fin");
 
         try {
-            // ✅ Backup base de datos
-            System.out.println("✅ Ejecutando backup de la base de datos...");
-            String dbBackupCommand = String.format(
-                    "docker exec %s pg_dump -U %s %s > \"%s\"",
-                    dbContainerName, postgresUser, postgresDb, dbBackupFilePath
+            // Backup base de datos
+            String dbBackupPathInContainer = String.format("/tmp/db_backup_%s_%s_%s.dump", category.toUpperCase(), instanceName, timestamp);
+            String dbDumpCommand = String.format(
+                    "docker exec %s pg_dump -U %s -d %s -Fc -f %s",
+                    dbContainerName, postgresUser, instanceName, dbBackupPathInContainer
             );
 
-            // ✅ Backup de Odoo (dentro del contenedor)
-            String odooBackupPathInContainer = "/tmp/odoo_backup_" + timestamp + ".tar.gz";
+            System.out.println("dbDumpCommand: "+dbDumpCommand+" Fin");
+
+            String dbCopyCommand = String.format(
+                    "docker cp %s:%s \"%s\"",
+                    dbContainerName, dbBackupPathInContainer, dbBackupFilePath
+            );
+            System.out.println("dbCopyCommand: "+dbCopyCommand+" Fin");
+
+            // Backup de Odoo
+            String odooBackupPathInContainer = String.format("/tmp/odoo_data_%s_%s_%s.tar.gz", category.toUpperCase(), instanceName, timestamp);
             String odooBackupCommand = "docker exec " + odooContainerName +
                     " tar -czf " + odooBackupPathInContainer + " -C /var/lib/odoo .";
-
-            // ✅ Copiar archivo desde el contenedor al host
             String dockerCopyCommand = "docker cp " + odooContainerName + ":" + odooBackupPathInContainer +
                     " \"" + odooBackupFilePath + "\"";
+            System.out.println("odooBackupPathInContainer: "+odooBackupPathInContainer+" Fin");
+            System.out.println("odooBackupCommand: "+odooBackupCommand+" Fin");
+            System.out.println("dockerCopyCommand: "+dockerCopyCommand+" Fin");
 
-            // 👉 DEBUG
-            System.out.println("Comando odooBackupCommand: [" + odooBackupCommand + "]");
-            System.out.println("Comando dockerCopyCommand: [" + dockerCopyCommand + "]");
+            boolean dbDumpSuccess = executeCommand(new String[]{"cmd.exe", "/c", dbDumpCommand});
+            boolean dbCopySuccess = executeCommand(new String[]{"cmd.exe", "/c", dbCopyCommand});
+            boolean dbSuccess = dbDumpSuccess && dbCopySuccess;
 
-            boolean dbSuccess = executeCommand(new String[]{"cmd.exe", "/c", dbBackupCommand});
+
+
+
             boolean odooCreateSuccess = executeCommand(new String[]{"cmd.exe", "/c", odooBackupCommand});
             boolean odooCopySuccess = executeCommand(new String[]{"cmd.exe", "/c", dockerCopyCommand});
-
             boolean odooSuccess = odooCreateSuccess && odooCopySuccess;
-            System.out.println("Comando odooSuccess: " + odooSuccess + " **FIN");
 
-            System.out.println("📊 Resultados:");
             System.out.println("📌 Backup BD: " + (dbSuccess ? "✅ Éxito" : "❌ Falló"));
             System.out.println("📌 Backup Odoo: " + (odooSuccess ? "✅ Éxito" : "❌ Falló"));
 
@@ -300,13 +330,14 @@ public class DockerService {
                 return "Error: No se pudo realizar el backup.";
             }
 
-            return "Backup creado exitosamente: " + finalBackupFile;
+            return "Backup creado exitosamente para la instancia: " + instanceName;
 
         } catch (Exception e) {
             e.printStackTrace();
             return "Error al crear el backup: " + e.getMessage();
         }
     }
+
 
 
 
@@ -342,59 +373,78 @@ public class DockerService {
     }
 
 
-    //-----------------
-    public String restoreBackup(String instanceName, String category, String fileName) {
+    //-----------------v1
+
+    public String restoreBackup(String instanceName, String category, String dbBackupFileName, String odooBackupFileName) {
         String dbContainer = getContainerName(instanceName, category, true);
         String odooContainer = getContainerName(instanceName, category, false);
 
-        if (dbContainer == null || odooContainer == null) {
-            return "Error: Contenedores no encontrados.";
-        }
+        System.out.println("dbBackupFileName: " + dbBackupFileName);
+        System.out.println("odooBackupFileName: " + odooBackupFileName);
+        System.out.println("📦 DB: " + dbContainer);
+        System.out.println("📦 Odoo: " + odooContainer);
 
-        File backupFile = new File(backupDir, fileName);
-        if (!backupFile.exists()) {
-            return "Error: El archivo no existe.";
+        String dbFile = backupDir + File.separator + dbBackupFileName;
+        String odooFile = backupDir + File.separator + odooBackupFileName;
+
+        System.out.println("dbFile: "+dbFile);
+        System.out.println("odooFile " +odooFile);
+
+        if (!new File(dbFile).exists() || !new File(odooFile).exists()) {
+            return "❌ Archivos de backup no encontrados.";
         }
 
         try {
-            if (fileName.endsWith(".tar.gz")) {
-                // Restaurar archivos Odoo
-                String containerPath = "/tmp/" + fileName;
-                String restoreCommand = String.format(
-                        "docker cp \"%s\" %s:%s", backupFile.getAbsolutePath(), odooContainer, containerPath);
-                String extractCommand = String.format(
-                        "docker exec %s tar -xzf %s -C /var/lib/odoo", odooContainer, containerPath);
+            // 🔁 1. Cerrar conexiones activas
+            String terminateCmd = String.format(
+                    "docker exec %s psql -U %s -d postgres -c \"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '%s' AND pid <> pg_backend_pid();\"",
+                    dbContainer, postgresUser, instanceName);
 
-                return (executeCommand(new String[]{"cmd.exe", "/c", restoreCommand}) &&
-                        executeCommand(new String[]{"cmd.exe", "/c", extractCommand}))
-                        ? "Archivos Odoo restaurados correctamente." : "Error al restaurar archivos Odoo.";
+            System.out.println("terminateCmd "+terminateCmd);
 
-            } else if (fileName.endsWith(".sql")) {
-                // Restaurar base de datos
-                String containerPath = "/tmp/" + fileName;
-                String copyCommand = String.format(
-                        "docker cp \"%s\" %s:%s", backupFile.getAbsolutePath(), dbContainer, containerPath);
-                String restoreCommand = String.format(
-                        "docker exec %s psql -U %s -d %s -f %s", dbContainer, postgresUser, postgresDb, containerPath);
+            // 🗑️ 2. Eliminar base de datos
+            String dropCmd = String.format("docker exec %s dropdb -U %s %s", dbContainer, postgresUser, instanceName);
+            System.out.println("dropCmd "+dropCmd);
+            // 🆕 3. Crear base de datos vacía
+            String createCmd = String.format("docker exec %s createdb -U %s %s", dbContainer, postgresUser, instanceName);
+            System.out.println("createCmd "+createCmd);
+            // 📂 4. Copiar backup .dump al contenedor
+            String copyDbCmd = String.format("docker cp \"%s\" %s:/tmp/restore.dump", dbFile, dbContainer);
+            System.out.println("copyDbCmd "+copyDbCmd);
+            // ♻️ 5. Restaurar con pg_restore
+            String restoreCmd = String.format(
+                    "docker exec %s pg_restore -U %s -d %s --clean --if-exists --verbose /tmp/restore.dump",
+                    dbContainer, postgresUser, instanceName);
+            System.out.println("restoreCmd "+restoreCmd);
+            // Ejecutar comandos paso a paso
+            boolean dbRestored =
+                    executeCommand(new String[]{"cmd.exe", "/c", terminateCmd}) &&
+                            executeCommand(new String[]{"cmd.exe", "/c", dropCmd}) &&
+                            executeCommand(new String[]{"cmd.exe", "/c", createCmd}) &&
+                            executeCommand(new String[]{"cmd.exe", "/c", copyDbCmd}) &&
+                            executeCommand(new String[]{"cmd.exe", "/c", restoreCmd});
 
-                return (executeCommand(new String[]{"cmd.exe", "/c", copyCommand}) &&
-                        executeCommand(new String[]{"cmd.exe", "/c", restoreCommand}))
-                        ? "Base de datos restaurada correctamente." : "Error al restaurar base de datos.";
-            } else {
-                return "Tipo de archivo no soportado.";
-            }
+            System.out.println("dbRestored: " + dbRestored);
+
+            // 📁 6. Copiar backup de archivos de Odoo
+            String copyOdooCmd = String.format("docker cp \"%s\" %s:/tmp/restore.tar.gz", odooFile, odooContainer);
+            String extractOdooCmd = String.format("docker exec %s tar -xzf /tmp/restore.tar.gz -C /var/lib/odoo", odooContainer);
+            System.out.println("copyOdooCmd "+copyOdooCmd);
+            System.out.println(" extractOdooCmd "+extractOdooCmd);
+            boolean odooRestored =
+                    executeCommand(new String[]{"cmd.exe", "/c", copyOdooCmd}) &&
+                            executeCommand(new String[]{"cmd.exe", "/c", extractOdooCmd});
+
+            System.out.println("odooRestored: " + odooRestored);
+
+            return (dbRestored && odooRestored)
+                    ? "✅ Restauración completada en la instancia " + instanceName
+                    : "❌ Falló la restauración en la instancia " + instanceName;
+
         } catch (Exception e) {
             e.printStackTrace();
-            return "Error al restaurar backup: " + e.getMessage();
+            return "❌ Error durante el restore: " + e.getMessage();
         }
     }
-
-
-
-
-
-
-
-
 
 }

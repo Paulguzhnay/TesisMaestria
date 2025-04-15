@@ -10,6 +10,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.MediaType;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 
 import java.io.File;
@@ -79,15 +80,28 @@ public class DockerController {
     }
 
     //----------
-    @PostMapping("/restore")
-    public ResponseEntity<String> restoreBackup(@RequestBody Map<String, String> request) {
-        String instanceName = request.get("name");
-        String category = request.get("category");
-        String fileName = request.get("file");
+    @PostMapping("/restore-specific")
+    public ResponseEntity<String> restoreSpecific(@RequestBody Map<String, String> payload) {
+        String instance = payload.get("name");
+        String category = payload.get("category");
+        String dbFile = payload.get("dbBackupFileName");     // ✅ Cambiado aquí
+        String odooFile = payload.get("odooBackupFileName"); // ✅ Y aquí
 
-        String result = dockerService.restoreBackup(instanceName, category, fileName);
-        return ResponseEntity.ok(result);
+        System.out.println("payload: " + payload);
+        System.out.println("dbFile: " + dbFile);
+        System.out.println("odooFile: " + odooFile);
+
+        String result = dockerService.restoreBackup(instance, category, dbFile, odooFile);
+
+        if (result.startsWith("✅")) {
+            return ResponseEntity.ok(result);
+        } else {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
+        }
     }
+
+
+
 
 
 
