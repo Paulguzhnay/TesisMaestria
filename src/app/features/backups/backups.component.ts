@@ -1,13 +1,23 @@
 import { Component, OnInit } from '@angular/core';
 import { BackupService } from '../../services/backup.service';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+
 
 @Component({
   selector: 'app-backups',
   standalone: false,
   templateUrl: './backups.component.html',
-  styleUrl: './backups.component.css'
+  styleUrls: ['./backups.component.css'] // ✅
+
 })
 export class BackupsComponent implements OnInit {
+  isRestoring: boolean = false; // Para mostrar spinner o bloquear botones
+  restoringGroupId: string | null = null; // Para saber cuál grupo está en restauración
+  currentStep: string = '';
+  notificationMessage: string | null = null;
+  notificationType: 'success' | 'error' | null = null;
+
+
   backups: any[] = [];
   groupedBackups: {
     timestamp: string;
@@ -62,8 +72,16 @@ export class BackupsComponent implements OnInit {
     });
   }
   
+  showNotification(message: string, type: 'success' | 'error') {
+    this.notificationMessage = message;
+    this.notificationType = type;
   
- 
+    setTimeout(() => {
+      this.notificationMessage = null;
+      this.notificationType = null;
+    }, 5000); // Mostrar notificación 5 segundos
+  }
+  
   formatTimestamp(timestamp: string): string {
     const date = new Date(Number(timestamp));
     return date.toLocaleString('es-EC', {
@@ -95,21 +113,68 @@ export class BackupsComponent implements OnInit {
     document.body.removeChild(a);
   }
 
-  restoreBackup(backup: any) {
-    const instanceName = backup.name.includes('db') ? backup.name.replace('db_backup_', '').replace('.sql', '') : backup.name;
-    const category = 'DEVELOPMENT'; // puedes ajustar si es dinámico
+  restoreBackupGroup(group: any): void {
+    this.isRestoring = true;
+    this.currentStep = 'Iniciando...';
+    this.restoringGroupId = group.timestamp;
+  
+    const dbFile = group.backups.find((b: { name: string }) => b.name.includes('db_backup'))?.name;
+    const odooFile = group.backups.find((b: { name: string }) => b.name.includes('odoo_data'))?.name;
+  
+    if (!dbFile || !odooFile) {
+      this.showNotification('❌ No se encontraron archivos de backup válidos', 'error');
+      this.isRestoring = false;
+      return;
+    }
+  
+    const match = dbFile.match(/^db_backup_([A-Z]+)_(.+?)_/);
+    let category = 'UNKNOWN';
+    let name = 'undefined';
+  
+    if (match && match.length >= 3) {
+      category = match[1];
+      name = match[2];
+    } else {
+      this.showNotification('❌ No se pudo determinar la categoría desde el nombre del archivo.', 'error');
+      this.isRestoring = false;
+      return;
+    }
   
     const payload = {
-      name: instanceName,
-      category: category,
-      file: backup.name
+      name,
+      category,
+      dbBackupFileName: dbFile,
+      odooBackupFileName: odooFile
     };
   
-    this.backupService.restoreBackup(payload).subscribe({
-      next: (res) => console.log('Restauración completada:', res),
-      error: (err) => console.error('Error al restaurar:', err)
+    console.log('🔁 Enviando payload de restauración:', payload);
+  
+    this.backupService.restoreSpecific(payload).subscribe({
+      next: (response: string) => {
+        this.showNotification(response, 'success');
+        this.isRestoring = false;
+        this.currentStep = '';
+      },
+      error: (error) => {
+        console.error('❌ Error durante la restauración:', error);
+        this.showNotification('❌ Error durante la restauración', 'error');
+        this.isRestoring = false;
+        this.currentStep = '';
+      }
     });
   }
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+
   
 
   createBackup() {

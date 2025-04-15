@@ -17,7 +17,18 @@ export class BackupService {
     return this.http.post<string>(this.apiUrl, {}, { responseType: 'text' as 'json' }); // 👈 Asegurar respuesta en texto
   }
 
-  restoreBackup(data: { name: string, category: string, file: string }): Observable<string> {
-    return this.http.post('http://localhost:8080/docker/restore', data, { responseType: 'text' });
+ 
+
+  restoreSpecific(payload: any): Observable<string> {
+    console.log(payload)
+    return this.http.post('http://localhost:8080/docker/restore-specific', payload, {
+      responseType: 'text' as const 
+    });
   }
+  
+  
+  
+  
+  
+  
 }

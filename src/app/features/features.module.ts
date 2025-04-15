@@ -4,6 +4,7 @@ import { DashboardComponent } from './dashboard/dashboard.component';
 import { SettingsComponent } from './settings/settings.component';
 import { ShellComponent } from './shell/shell.component';
 import { BackupsComponent } from './backups/backups.component';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 
 
 
@@ -15,9 +16,11 @@ import { BackupsComponent } from './backups/backups.component';
     ShellComponent,
     BackupsComponent,
 
+
   ],
   imports: [
-    CommonModule
+    CommonModule,
+    MatProgressBarModule,
   ],
   exports: [
     DashboardComponent,

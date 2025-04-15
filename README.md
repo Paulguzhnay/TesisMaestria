@@ -18,3 +18,4 @@ npm install @angular/cdk
 
 npm install xterm xterm-addon-fit rxjs
 
+ng add @angular/material
