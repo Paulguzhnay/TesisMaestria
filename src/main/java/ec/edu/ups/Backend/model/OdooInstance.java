@@ -22,8 +22,18 @@ public class OdooInstance {
         this.url = url;
     }
 
+
     public Long getId() { return id; }
     public String getName() { return name; }
     public String getCategory() { return category; }
     public String getUrl() { return url; }
+
+    // Setters
+    public void setName(String name) { this.name = name; }
+
+    public void setCategory(String category) { this.category = category; }
+
+    public void setUrl(String url) { this.url = url; }
+
+    public void setId(Long id) { this.id = id; }
 }
