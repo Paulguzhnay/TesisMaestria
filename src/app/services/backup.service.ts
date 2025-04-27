@@ -25,6 +25,20 @@ export class BackupService {
       responseType: 'text' as const 
     });
   }
+
+  //------------------
+
+  createBackupForInstance(payload: { name: string, category: string }): Observable<string> {
+    return this.http.post('http://localhost:8080/docker/backup', payload, {
+      responseType: 'text' as 'json'
+    }) as Observable<string>;  
+  }
+  
+  deleteBackup(fileName: string): Observable<string> {
+    return this.http.delete(`http://localhost:8080/docker/delete/${encodeURIComponent(fileName)}`, {
+      responseType: 'text' as 'json'
+    }) as Observable<string>;  
+  }
   
   
   

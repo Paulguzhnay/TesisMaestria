@@ -1,65 +1,104 @@
-<div class="notification" *ngIf="notificationMessage" [ngClass]="{ 'success': notificationType === 'success', 'error': notificationType === 'error' }">
-  {{ notificationMessage }}
-</div>
+<div class="container">
 
-<!-- Spinner de restauración con barra de progreso -->
-<div *ngIf="isRestoring" class="progress-container">
-  <div class="restoring-indicator">
-    <p>{{ currentStep || '🔄 Restaurando backup... por favor espera.' }}</p>
-    <mat-progress-bar mode="indeterminate" color="primary"></mat-progress-bar>
+  <!-- Notificación -->
+  <div class="notification" *ngIf="notificationMessage" [ngClass]="{ 'success': notificationType === 'success', 'error': notificationType === 'error' }">
+    {{ notificationMessage }}
   </div>
-</div>
 
-<table>
-  <thead>
-    <tr>
-      <th>Archivo</th>
-      <th>Time (UTC)</th>
-      <th>Branch</th>
-      <th>Version</th>
-      <th>Type</th>
-      <th>Revision</th>
-      <th>Actions</th>
-    </tr>
-  </thead>
-  <tbody>
-    <ng-container *ngFor="let group of groupedBackups">
-      
-      <!-- 🕒 Encabezado del grupo -->
-      <tr class="group-header">
-        <td colspan="7">
-          🕒 Backup del: {{ formatTimestamp(group.timestamp) }}
-        </td>
-      </tr>
+  <!-- Spinner de restauración -->
+  <div *ngIf="isRestoring" class="progress-container">
+    <div class="restoring-indicator">
+      <p>{{ currentStep || '🔄 Restaurando backup... por favor espera.' }}</p>
+      <mat-progress-bar mode="indeterminate" color="primary"></mat-progress-bar>
+    </div>
+  </div>
 
-      <!-- Archivos del grupo -->
-      <tr *ngFor="let backup of group.backups" [ngClass]="group.colorClass">
-        <td>
-          {{ backup.name.includes('db_backup') ? '📦 Base de Datos' : '📁 Odoo Archivos' }}<br>
-          <small>{{ backup.name }}</small>
-        </td>
-        <td>{{ backup.time }}</td>
-        <td>{{ backup.branch }}</td>
-        <td>{{ backup.version }}</td>
-        <td>{{ backup.type }}</td>
-        <td>{{ backup.revision }}</td>
-        <td>
-          <button (click)="downloadBackup(backup)">Download</button>
-        </td>
-      </tr>
+  <!-- 🛠️ Instancias Disponibles -->
+  <h2>Instancias Disponibles</h2>
+  <mat-divider></mat-divider>
 
-      <!-- Acción para restaurar el grupo -->
-      <tr class="group-actions" [ngClass]="group.colorClass">
-        <td colspan="7">
-          <strong>🔁 Restaurar grupo completo:</strong>
-          <button 
-            (click)="restoreBackupGroup(group)" 
-            [disabled]="isRestoring && restoringGroupId === group.timestamp">
-            🔁 Restaurar este grupo
+  <div class="instances-container">
+    <mat-card *ngFor="let instance of instances" class="instance-card">
+      <mat-card-header>
+        <mat-card-title>{{ instance.name }}</mat-card-title>
+        <mat-card-subtitle>{{ instance.category }}</mat-card-subtitle>
+      </mat-card-header>
+
+      <mat-card-actions>
+        <button mat-raised-button color="primary" (click)="createBackupForInstance(instance)">
+          📦 Crear Backup
+        </button>
+        <button mat-raised-button color="warn" (click)="deleteInstance(instance)">
+          🗑️ Eliminar Instancia
+        </button>
+      </mat-card-actions>
+    </mat-card>
+  </div>
+
+  <!-- 📦 Backups Existentes -->
+  <h2 style="margin-top: 40px;">Backups Existentes</h2>
+  <mat-divider></mat-divider>
+
+  <!-- Agrupación por timestamp -->
+  <div class="table-container" *ngFor="let group of groupedBackups">
+
+    <h3 class="group-header">
+      🕒 Backup del: {{ formatTimestamp(group.timestamp) }}
+      <ng-container *ngIf="group.category && group.name">
+        — [{{ group.category }}] {{ group.name }}
+      </ng-container>
+    </h3>
+
+    <table mat-table [dataSource]="group.backups" class="mat-elevation-z8" [ngClass]="group.colorClass">
+
+      <!-- Archivo -->
+      <ng-container matColumnDef="name">
+        <th mat-header-cell *matHeaderCellDef>Archivo</th>
+        <td mat-cell *matCellDef="let backup">
+          {{ backup.name.includes('db_backup') ? '📦 Base de Datos' : '📁 Odoo Archivos' }}
+          <br><small>{{ backup.name }}</small>
+        </td>
+      </ng-container>
+
+      <!-- Tiempo -->
+      <ng-container matColumnDef="time">
+        <th mat-header-cell *matHeaderCellDef>Time (UTC)</th>
+        <td mat-cell *matCellDef="let backup">{{ backup.time }}</td>
+      </ng-container>
+
+      <!-- Acciones -->
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef>Acciones</th>
+        <td mat-cell *matCellDef="let backup">
+          <button mat-icon-button color="primary" matTooltip="Descargar" (click)="downloadBackup(backup)">
+            <mat-icon>download</mat-icon>
+          </button>
+          <button mat-icon-button color="warn" matTooltip="Eliminar" (click)="deleteBackup(backup)">
+            <mat-icon>delete</mat-icon>
+          </button>
+
+          <button *ngIf="backup.name.includes('db_backup')" 
+            mat-icon-button color="accent" matTooltip="Restaurar este grupo"
+            (click)="restoreBackup(backup)">
+            <mat-icon>restore</mat-icon>
           </button>
         </td>
-      </tr>
+      </ng-container>
 
-    </ng-container>
-  </tbody>
-</table>
+      <tr mat-header-row *matHeaderRowDef="['name', 'time', 'actions']"></tr>
+      <tr mat-row *matRowDef="let row; columns: ['name', 'time', 'actions'];"></tr>
+
+    </table>
+
+    <!-- Botón Restaurar grupo completo -->
+    <div style="text-align: center; margin: 20px 0;">
+      <button mat-raised-button color="accent"
+        (click)="restoreBackupGroup(group)"
+        [disabled]="isRestoring && restoringGroupId === group.timestamp">
+        🔄 Restaurar este grupo
+      </button>
+    </div>
+
+  </div>
+
+</div>

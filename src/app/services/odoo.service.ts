@@ -19,4 +19,9 @@ export class OdooService {
   getInstances(): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/instances`);
   }
+  //------------
+deleteInstance(name: string, category: string): Observable<string> {
+  return this.http.delete<string>(`http://localhost:8080/api/odoo/delete?name=${encodeURIComponent(name)}&category=${encodeURIComponent(category)}`);
 }
+}
+
