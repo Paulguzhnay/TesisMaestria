@@ -42,3 +42,21 @@ button {
 .branch.green { background: white; color: black; }
 .branch.yellow { background: white; color: black; }
 .branch.blue { background: white; color: black; }
+
+.success-snackbar {
+  background-color: #4CAF50; /* verde */
+  color: white;
+  font-weight: bold;
+}
+
+.warning-snackbar {
+  background-color: #FFC107; /* amarillo */
+  color: black;
+  font-weight: bold;
+}
+
+.error-snackbar {
+  background-color: #F44336; /* rojo */
+  color: white;
+  font-weight: bold;
+}

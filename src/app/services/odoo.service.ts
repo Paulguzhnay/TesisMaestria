@@ -23,5 +23,11 @@ export class OdooService {
 deleteInstance(name: string, category: string): Observable<string> {
   return this.http.delete<string>(`http://localhost:8080/api/odoo/delete?name=${encodeURIComponent(name)}&category=${encodeURIComponent(category)}`);
 }
+
+//------------------
+mergeInstances(sourceName: string, targetName: string, category: string): Observable<string> {
+  const payload = { source: sourceName, target: targetName, category };
+  return this.http.post<string>(`${this.apiUrl}/merge`, payload, { responseType: 'text' as 'json' });
+}
 }
 
