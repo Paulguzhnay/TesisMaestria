@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { OdooService } from '../../services/odoo.service';
 import { MatSnackBar } from '@angular/material/snack-bar'; 
-
+import { ActivatedRoute, Router } from '@angular/router';
 @Component({
   selector: 'app-sidebar',
   standalone: false,
@@ -16,11 +16,42 @@ export class SidebarComponent implements OnInit {
 
   selectedSource: any = null;
   selectedTarget: any = null;
+  showSidebar = false;
 
-  constructor(private odooService: OdooService,  private snackBar: MatSnackBar) {}
+  constructor(
+    private odooService: OdooService,
+    private router: Router,
+    private route: ActivatedRoute,
+    private snackBar: MatSnackBar
+  ) {}
 
   ngOnInit(): void {
-    this.loadInstances();
+    this.router.events.subscribe(() => {
+      const currentUrl = this.router.url;
+      if (currentUrl.includes('/projects/')) {
+        this.showSidebar = true;
+        const projectName = currentUrl.split('/projects/')[1];
+        this.loadInstancesByProject(projectName);
+      } else {
+        this.showSidebar = false;
+        this.productionBranches = [];
+        this.stagingBranches = [];
+        this.developmentBranches = [];
+      }
+    });
+  }
+  loadInstancesByProject(projectName: string): void {
+    this.odooService.getByProject(projectName).subscribe({
+      next: (instances) => {
+        this.allInstances = instances;
+        this.productionBranches = instances.filter(inst => inst.category === 'PRODUCTION');
+        this.stagingBranches = instances.filter(inst => inst.category === 'STAGING');
+        this.developmentBranches = instances.filter(inst => inst.category === 'DEVELOPMENT');
+      },
+      error: (error) => {
+        console.error('Error al cargar instancias:', error);
+      }
+    });
   }
 
   loadInstances(): void {

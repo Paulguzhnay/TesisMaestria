@@ -29,5 +29,9 @@ mergeInstances(sourceName: string, targetName: string, category: string): Observ
   const payload = { source: sourceName, target: targetName, category };
   return this.http.post<string>(`${this.apiUrl}/merge`, payload, { responseType: 'text' as 'json' });
 }
+//---------------------
+getByProject(projectName: string): Observable<any[]> {
+  return this.http.get<any[]>(`${this.apiUrl}/instances/by-project/${encodeURIComponent(projectName)}`);
+}
 }
 

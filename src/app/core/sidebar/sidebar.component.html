@@ -1,59 +1,64 @@
-<div class="sidebar">
 
-  <!-- Categoría: PRODUCTION -->
-  <div class="category">
-    <span>PRODUCTION</span>
-    <div *ngFor="let branch of productionBranches" class="branch">
-      <a [href]="branch.url" target="_blank">{{ branch.name }}</a>
+
+
+<div class="sidebar" *ngIf="showSidebar">
+  <div class="sidebar">
+
+    <!-- Categoría: PRODUCTION -->
+    <div class="category">
+      <span>PRODUCTION</span>
+      <div *ngFor="let branch of productionBranches" class="branch">
+        <a [href]="branch.url" target="_blank">{{ branch.name }}</a>
+      </div>
+      <button (click)="addOdooInstance('PRODUCTION')">+</button>
     </div>
-    <button (click)="addOdooInstance('PRODUCTION')">+</button>
-  </div>
-
-  <!-- Categoría: STAGING -->
-  <div class="category">
-    <span>STAGING</span>
-    <div *ngFor="let branch of stagingBranches" class="branch">
-      <a [href]="branch.url" target="_blank">{{ branch.name }}</a>
+  
+    <!-- Categoría: STAGING -->
+    <div class="category">
+      <span>STAGING</span>
+      <div *ngFor="let branch of stagingBranches" class="branch">
+        <a [href]="branch.url" target="_blank">{{ branch.name }}</a>
+      </div>
+      <button (click)="addOdooInstance('STAGING')">+</button>
     </div>
-    <button (click)="addOdooInstance('STAGING')">+</button>
-  </div>
-
-  <!-- Categoría: DEVELOPMENT -->
-  <div class="category">
-    <span>DEVELOPMENT</span>
-    <div *ngFor="let branch of developmentBranches" class="branch">
-      <a [href]="branch.url" target="_blank">{{ branch.name }}</a>
+  
+    <!-- Categoría: DEVELOPMENT -->
+    <div class="category">
+      <span>DEVELOPMENT</span>
+      <div *ngFor="let branch of developmentBranches" class="branch">
+        <a [href]="branch.url" target="_blank">{{ branch.name }}</a>
+      </div>
+      <button (click)="addOdooInstance('DEVELOPMENT')">+</button>
     </div>
-    <button (click)="addOdooInstance('DEVELOPMENT')">+</button>
+  
+    <hr>
+  
+    <!-- Sección de Merge -->
+    <div class="merge-section">
+      <h3>🔀 Merge de Instancias</h3>
+  
+      <mat-form-field appearance="fill" style="width: 100%; margin-bottom: 10px;">
+        <mat-label>Origen (Branch a copiar)</mat-label>
+        <mat-select [(value)]="selectedSource">
+          <mat-option *ngFor="let instance of allInstances" [value]="instance">
+            {{ instance.name }} ({{ instance.category }})
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+  
+      <mat-form-field appearance="fill" style="width: 100%; margin-bottom: 20px;">
+        <mat-label>Destino (Branch a actualizar)</mat-label>
+        <mat-select [(value)]="selectedTarget">
+          <mat-option *ngFor="let instance of allInstances" [value]="instance">
+            {{ instance.name }} ({{ instance.category }})
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+  
+      <button mat-raised-button color="accent" (click)="mergeBranches()" [disabled]="!selectedSource || !selectedTarget">
+        🔀 Merge Instancias
+      </button>
+    </div>
+  
   </div>
-
-  <hr>
-
-  <!-- Sección de Merge -->
-  <div class="merge-section">
-    <h3>🔀 Merge de Instancias</h3>
-
-    <mat-form-field appearance="fill" style="width: 100%; margin-bottom: 10px;">
-      <mat-label>Origen (Branch a copiar)</mat-label>
-      <mat-select [(value)]="selectedSource">
-        <mat-option *ngFor="let instance of allInstances" [value]="instance">
-          {{ instance.name }} ({{ instance.category }})
-        </mat-option>
-      </mat-select>
-    </mat-form-field>
-
-    <mat-form-field appearance="fill" style="width: 100%; margin-bottom: 20px;">
-      <mat-label>Destino (Branch a actualizar)</mat-label>
-      <mat-select [(value)]="selectedTarget">
-        <mat-option *ngFor="let instance of allInstances" [value]="instance">
-          {{ instance.name }} ({{ instance.category }})
-        </mat-option>
-      </mat-select>
-    </mat-form-field>
-
-    <button mat-raised-button color="accent" (click)="mergeBranches()" [disabled]="!selectedSource || !selectedTarget">
-      🔀 Merge Instancias
-    </button>
-  </div>
-
 </div>

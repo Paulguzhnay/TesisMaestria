@@ -1,16 +1,25 @@
-<section class="dashboard">
-  <header>
-    <h1 class="tituloDash">Welcome to the Dashboard</h1>
-  </header>
+<div class="dashboard-wrapper">
+  <h1>Mis Proyectos</h1>
 
-  <div class="stats">
-    <article class="stat-card">
-      <p>Total Sales</p>
-      <h2>$ 500,000</h2>
-    </article>
-    <article class="stat-card">
-      <p>Users Active</p>
-      <h2>120</h2>
-    </article>
+  <div class="project-grid">
+    <div class="project-card" *ngFor="let project of projects">
+      <h3>{{ project.name }}</h3>
+
+      <ul>
+        <li><strong>Versión:</strong> {{ project.version }}</li>
+        <li><strong>Licencia:</strong> {{ project.license || 'N/A' }}</li>
+        <li><strong>Estado:</strong> {{ project.status }}</li>
+        <li><strong>Ubicación:</strong> {{ project.location }}</li>
+      </ul>
+
+      <div class="card-actions">
+        <button>Configuración</button>
+        <button>GitHub</button>
+        <a 
+          class="open-btn"
+          [routerLink]="['/projects', project.name]"
+          >Abrir</a>
+      </div>
+    </div>
   </div>
-</section>
+</div>

@@ -1,0 +1,21 @@
+<div class="dashboard-wrapper" *ngIf="project">
+    <h2>{{ project.name }}</h2>
+    <p><strong>Repositorio:</strong> {{ project.repository }}</p>
+    <p><strong>Versión:</strong> {{ project.version }}</p>
+    <p><strong>Ubicación:</strong> {{ project.location }}</p>
+    <p><strong>Estado:</strong> {{ project.status }}</p>
+  
+    <div *ngIf="loading">Cargando instancias...</div>
+    <div *ngIf="error" class="error">{{ error }}</div>
+  
+    <div class="category-section" *ngFor="let category of ['DEVELOPMENT', 'STAGING', 'PRODUCTION']">
+      <h3>{{ category }}</h3>
+      <div class="instances-grid">
+        <div class="instance-card" *ngFor="let inst of categorizedInstances[category] || []">
+          <h4>{{ inst.name }}</h4>
+          <p>Versión: {{ inst.version }}</p>
+          <a [href]="inst.url" target="_blank">Abrir</a>
+        </div>
+      </div>
+    </div>
+  </div>

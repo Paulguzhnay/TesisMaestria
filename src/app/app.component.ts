@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-root',
@@ -7,5 +8,11 @@ import { Component } from '@angular/core';
   styleUrl: './app.component.css'
 })
 export class AppComponent {
+  constructor(public router: Router) {}
   title = 'frontend';
+
+  showSidebar(): boolean {
+    // Ocultar el sidebar si la ruta actual es /dashboard o /project-setup
+    return !this.router.url.includes('/dashboard') && !this.router.url.includes('/project-setup');
+  }
 }

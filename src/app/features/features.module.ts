@@ -15,9 +15,15 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 
 //
 import { MatTableModule } from '@angular/material/table';
- 
- 
- 
+import { ProjectSetupComponent } from './project-setup/project-setup.component';
+import { FormGroup, FormsModule } from '@angular/forms';
+
+//
+import { ReactiveFormsModule } from '@angular/forms';
+import { ProjectDetailComponent } from './project-detail/project-detail.component';
+import { ProjectDashboardComponent } from './project-dashboard/project-dashboard.component';
+import { RouterModule } from '@angular/router';
+  
 
 
 
@@ -27,6 +33,10 @@ import { MatTableModule } from '@angular/material/table';
     SettingsComponent,
     ShellComponent,
     BackupsComponent,
+    ProjectSetupComponent,
+    ProjectDetailComponent,
+    ProjectDashboardComponent,
+ 
 
 
   ],
@@ -38,7 +48,9 @@ import { MatTableModule } from '@angular/material/table';
     MatDividerModule,
     MatIconModule,
     MatTooltipModule,
-    MatTableModule
+    MatTableModule,
+    ReactiveFormsModule,
+    RouterModule
   ],
   exports: [
     DashboardComponent,
