@@ -1,5 +1,4 @@
 package ec.edu.ups.Backend.controller;
-
 import ec.edu.ups.Backend.model.MergeRequest;
 import ec.edu.ups.Backend.model.OdooInstance;
 import ec.edu.ups.Backend.service.DockerService;
@@ -19,78 +18,76 @@ public class OdooController {
 
     @PostMapping("/create")
     public Map<String, String> createInstance(@RequestBody InstanceRequest request) {
-        // Llamar al servicio para crear la instancia de Odoo en la categoría indicada
-        String url = dockerService.createOdooInstance(request.getName(), request.getCategory());
-
-        // Crear la respuesta JSON
         Map<String, String> response = new HashMap<>();
-        if (url != null && url.startsWith("http")) {
-            response.put("message", "Instancia de Odoo creada con éxito en " + request.getCategory());
-            response.put("url", url);
-        } else {
-            response.put("message", "Error: No se pudo crear la instancia en " + request.getCategory());
+
+        try {
+            String url = dockerService.createOdooInstance(
+                    request.getName(),
+                    request.getCategory(),
+                    request.getProjectId()
+            );
+
+            if (url != null && url.startsWith("http")) {
+                response.put("message", "Instancia de Odoo creada con éxito en " + request.getCategory());
+                response.put("url", url);
+            } else {
+                response.put("message", "Error: No se pudo crear la instancia.");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.put("message", "❌ Error inesperado: " + e.getMessage());
         }
+
         return response;
     }
 
-    // Clase interna para manejar la petición
     static class InstanceRequest {
         private String name;
-        private String category; // Nueva propiedad
+        private String category;
+        private Long projectId; // 🆕
 
-        public String getName() {
-            return name;
-        }
+        public String getName() { return name; }
+        public void setName(String name) { this.name = name; }
 
-        public void setName(String name) {
-            this.name = name;
-        }
+        public String getCategory() { return category; }
+        public void setCategory(String category) { this.category = category; }
 
-        public String getCategory() {
-            return category;
-        }
-
-        public void setCategory(String category) {
-            this.category = category;
-        }
+        public Long getProjectId() { return projectId; }
+        public void setProjectId(Long projectId) { this.projectId = projectId; }
     }
-
 
     @GetMapping("/instances")
     public List<OdooInstance> getInstances() {
         return dockerService.getAllInstances();
     }
 
-    @PostMapping("/backup")
-    public ResponseEntity<String> backupInstance(@RequestBody Map<String, String> request) {
-        String instanceName = request.get("name");
-        String category = request.get("category");
-
-        boolean success = dockerService.backupOdooInstance(instanceName, category);
-        if (success) {
-            return ResponseEntity.ok("Backup realizado con éxito para la instancia: " + instanceName);
-        } else {
-            return ResponseEntity.status(500).body("Error al realizar el backup de la instancia: " + instanceName);
-        }
-    }
     @PostMapping("/merge")
     public ResponseEntity<String> mergeInstances(@RequestBody MergeRequest request) {
         try {
-            String sourceInstance = request.getSource();
-            String targetInstance = request.getTarget();
-            String category = request.getCategory();
+            String result = dockerService.mergeOdooInstances(
+                    request.getProjectId(), // 🆕
+                    request.getSource(),
+                    request.getTarget(),
+                    request.getCategory()
+            );
 
-            String result = dockerService.mergeOdooInstances(sourceInstance, targetInstance, category);
-
-            if (result.startsWith("✅")) {
-                return ResponseEntity.ok(result);
-            } else {
-                return ResponseEntity.status(500).body(result);
-            }
+            return result.startsWith("✅")
+                    ? ResponseEntity.ok(result)
+                    : ResponseEntity.status(500).body(result);
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.status(500).body("❌ Error inesperado en el servidor: " + e.getMessage());
+            return ResponseEntity.status(500).body("❌ Error inesperado: " + e.getMessage());
         }
     }
 
+    @GetMapping("/instances/by-project/{projectName}")
+    public ResponseEntity<List<OdooInstance>> getInstancesByProject(@PathVariable String projectName) {
+        try {
+            List<OdooInstance> instances = dockerService.getInstancesByProject(projectName);
+            return ResponseEntity.ok(instances);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).build();
+        }
+    }
 }

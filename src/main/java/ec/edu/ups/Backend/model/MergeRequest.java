@@ -1,10 +1,18 @@
 package ec.edu.ups.Backend.model;
 
 public class MergeRequest {
-
+    private Long projectId;
     private String source;
     private String target;
     private String category;
+
+    public Long getProjectId() {
+        return projectId;
+    }
+
+    public void setProjectId(Long projectId) {
+        this.projectId = projectId;
+    }
 
     public MergeRequest() {
     }

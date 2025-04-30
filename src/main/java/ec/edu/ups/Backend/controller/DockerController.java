@@ -1,3 +1,4 @@
+
 package ec.edu.ups.Backend.controller;
 
 import ec.edu.ups.Backend.model.BackupInfo;
@@ -19,6 +20,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
+
 @RestController
 @RequestMapping("/docker")
 public class DockerController {
@@ -29,46 +31,57 @@ public class DockerController {
         this.dockerService = dockerService;
     }
 
-
-
-    // Nuevo endpoint para crear un backup
-//    @PostMapping("/backups")
-//    public ResponseEntity<String> createBackup() {
-//        String backup = dockerService.createBackup();
-//        if (backup == null || backup.isEmpty()) {
-//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error al crear backup");
-//           }
-//        return ResponseEntity.ok(backup);
-//    }
-
     @GetMapping("/backups")
     public List<BackupInfo> getBackups() {
         return dockerService.getBackups();
     }
 
     @PostMapping("/backup")
-
     public ResponseEntity<String> backupInstance(@RequestBody Map<String, String> request) {
-        System.out.println("Request recibida: " + request); // ✅ Agregar esto para debug
-        String instanceName = request.get("name");
-        String category = request.get("category");
+        System.out.println("📥 Request recibida: " + request);
 
-        String response = dockerService.createBackup(instanceName, category);
-        if (response.startsWith("Backup creado")) {
-            return ResponseEntity.ok(response);
-        } else {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        try {
+            Long projectId = Long.parseLong(request.get("projectId"));
+            String instanceName = request.get("name");
+            String category = request.get("category");
+
+            String response = dockerService.createBackup(projectId, instanceName, category);
+            return response.startsWith("Backup creado")
+                    ? ResponseEntity.ok(response)
+                    : ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("❌ Parámetros inválidos o incompletos.");
         }
     }
 
+    @PostMapping("/restore-specific")
+    public ResponseEntity<String> restoreSpecific(@RequestBody Map<String, String> payload) {
+        System.out.println("📥 Payload: " + payload);
+
+        try {
+            Long projectId = Long.parseLong(payload.get("projectId"));
+            String instance = payload.get("name");
+            String category = payload.get("category");
+            String dbFile = payload.get("dbBackupFileName");
+            String odooFile = payload.get("odooBackupFileName");
+
+            String result = dockerService.restoreBackup(projectId, instance, category, dbFile, odooFile);
+            return result.startsWith("✅")
+                    ? ResponseEntity.ok(result)
+                    : ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("❌ Error en los datos enviados.");
+        }
+    }
 
     @GetMapping("/download/{fileName}")
     public ResponseEntity<Resource> downloadBackup(@PathVariable String fileName) throws IOException {
         File file = new File("C:\\Users\\paul-\\2025\\Maestria\\Tesis\\Backups", fileName);
-
-        if (!file.exists()) {
-            return ResponseEntity.notFound().build();
-        }
+        if (!file.exists()) return ResponseEntity.notFound().build();
 
         InputStreamResource resource = new InputStreamResource(new FileInputStream(file));
 
@@ -79,42 +92,16 @@ public class DockerController {
                 .body(resource);
     }
 
-    //----------
-    @PostMapping("/restore-specific")
-    public ResponseEntity<String> restoreSpecific(@RequestBody Map<String, String> payload) {
-        String instance = payload.get("name");
-        String category = payload.get("category");
-        String dbFile = payload.get("dbBackupFileName");     // ✅ Cambiado aquí
-        String odooFile = payload.get("odooBackupFileName"); // ✅ Y aquí
-
-        System.out.println("payload: " + payload);
-        System.out.println("dbFile: " + dbFile);
-        System.out.println("odooFile: " + odooFile);
-
-        String result = dockerService.restoreBackup(instance, category, dbFile, odooFile);
-
-        if (result.startsWith("✅")) {
-            return ResponseEntity.ok(result);
-        } else {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
-        }
-    }
-
-    //----DELETE
     @DeleteMapping("/delete/{fileName}")
     public ResponseEntity<String> deleteBackup(@PathVariable String fileName) {
         try {
             File file = new File("C:\\Users\\paul-\\2025\\Maestria\\Tesis\\Backups", fileName);
-            if (file.exists() && file.delete()) {
-                return ResponseEntity.ok("Backup eliminado exitosamente.");
-            } else {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Backup no encontrado.");
-            }
+            return (file.exists() && file.delete())
+                    ? ResponseEntity.ok("Backup eliminado exitosamente.")
+                    : ResponseEntity.status(HttpStatus.NOT_FOUND).body("Backup no encontrado.");
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error al eliminar backup.");
         }
     }
-
-
 }
