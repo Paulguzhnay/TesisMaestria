@@ -520,7 +520,7 @@ public class DockerService {
         }
     }
 
-    public String mergeOdooInstances(Long projectId, String sourceInstance, String targetInstance, String category) {
+    public String mergeOdooInstances(Long projectId, String sourceInstance, String targetInstance) {
         try {
             System.out.println("🚀 Iniciando proceso de merge: " + sourceInstance + " ➡️ " + targetInstance);
 
@@ -531,10 +531,13 @@ public class DockerService {
                 return "❌ Una o ambas instancias no pertenecen al proyecto con ID: " + projectId;
             }
 
-            String sourceDbContainer = getContainerName(sourceInstance, category, true);
-            String targetDbContainer = getContainerName(targetInstance, category, true);
-            String sourceOdooContainer = getContainerName(sourceInstance, category, false);
-            String targetOdooContainer = getContainerName(targetInstance, category, false);
+            String sourceCategory = sourceList.get(0).getCategory();
+            String targetCategory = targetList.get(0).getCategory();
+
+            String sourceDbContainer = getContainerName(sourceInstance, sourceCategory, true);
+            String targetDbContainer = getContainerName(targetInstance, targetCategory, true);
+            String sourceOdooContainer = getContainerName(sourceInstance, sourceCategory, false);
+            String targetOdooContainer = getContainerName(targetInstance, targetCategory, false);
 
             if (sourceDbContainer == null || targetDbContainer == null || sourceOdooContainer == null || targetOdooContainer == null) {
                 return "❌ No se encontraron todos los contenedores necesarios para el merge.";

@@ -1,10 +1,19 @@
 package ec.edu.ups.Backend.model;
 
 public class MergeRequest {
+
     private Long projectId;
     private String source;
     private String target;
-    private String category;
+
+    public MergeRequest() {
+    }
+
+    public MergeRequest(Long projectId, String source, String target) {
+        this.projectId = projectId;
+        this.source = source;
+        this.target = target;
+    }
 
     public Long getProjectId() {
         return projectId;
@@ -12,15 +21,6 @@ public class MergeRequest {
 
     public void setProjectId(Long projectId) {
         this.projectId = projectId;
-    }
-
-    public MergeRequest() {
-    }
-
-    public MergeRequest(String source, String target, String category) {
-        this.source = source;
-        this.target = target;
-        this.category = category;
     }
 
     public String getSource() {
@@ -37,13 +37,5 @@ public class MergeRequest {
 
     public void setTarget(String target) {
         this.target = target;
-    }
-
-    public String getCategory() {
-        return category;
-    }
-
-    public void setCategory(String category) {
-        this.category = category;
     }
 }

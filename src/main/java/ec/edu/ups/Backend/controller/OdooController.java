@@ -65,10 +65,9 @@ public class OdooController {
     public ResponseEntity<String> mergeInstances(@RequestBody MergeRequest request) {
         try {
             String result = dockerService.mergeOdooInstances(
-                    request.getProjectId(), // 🆕
+                    request.getProjectId(),
                     request.getSource(),
-                    request.getTarget(),
-                    request.getCategory()
+                    request.getTarget()
             );
 
             return result.startsWith("✅")
