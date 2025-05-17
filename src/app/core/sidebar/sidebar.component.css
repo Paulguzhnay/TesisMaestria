@@ -1,9 +1,13 @@
 .sidebar {
-  width: 250px;
-  background: #2e2e2e;
-  padding: 10px;
-  color: white;
+  position: fixed;
+  top: 64px;          /* desplaza hacia abajo para no tapar el header */
+  left: 0;
+  bottom: 0;
+  width: 250px;       /* o el ancho que tengas */
+  overflow-y: auto;
+  z-index: 1;         /* más bajo que el header */
 }
+
 
 .category {
   margin-top: 10px;
@@ -59,4 +63,13 @@ button {
   background-color: #F44336; /* rojo */
   color: white;
   font-weight: bold;
+}
+:host {
+  position: fixed;
+  top: 64px;          /* empuja el sidebar bajo el header */
+  left: 0;
+  bottom: 0;
+  width: 250px;
+  z-index: 1;         /* debe quedar por debajo del header */
+  overflow-y: auto;
 }

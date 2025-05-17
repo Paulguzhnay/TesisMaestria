@@ -37,3 +37,11 @@ nav {
   color: white;
   cursor: pointer;
 }
+:host {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  z-index: 2;         /* más alto que el sidebar */
+}

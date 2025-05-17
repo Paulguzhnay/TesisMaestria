@@ -1,16 +1,13 @@
-
-
-
 <div class="sidebar" *ngIf="showSidebar">
-  <div class="sidebar">
-
     <!-- Categoría: PRODUCTION -->
     <div class="category">
       <span>PRODUCTION</span>
       <div *ngFor="let branch of productionBranches" class="branch">
         <a [href]="branch.url" target="_blank">{{ branch.name }}</a>
       </div>
-      <button (click)="addOdooInstance('PRODUCTION')">+</button>
+      <button mat-raised-button color="accent" (click)="openCreateDialog()">
+        + Mover A
+      </button>
     </div>
   
     <!-- Categoría: STAGING -->
@@ -19,7 +16,9 @@
       <div *ngFor="let branch of stagingBranches" class="branch">
         <a [href]="branch.url" target="_blank">{{ branch.name }}</a>
       </div>
-      <button (click)="addOdooInstance('STAGING')">+</button>
+      <button mat-raised-button color="accent" (click)="openCreateDialog()">
+        + Mover a
+      </button>
     </div>
   
     <!-- Categoría: DEVELOPMENT -->
@@ -28,7 +27,9 @@
       <div *ngFor="let branch of developmentBranches" class="branch">
         <a [href]="branch.url" target="_blank">{{ branch.name }}</a>
       </div>
-      <button (click)="addOdooInstance('DEVELOPMENT')">+</button>
+      <button  mat-raised-button color="accent" (click)="openCreateDialog()">
+        + Crear
+      </button>
     </div>
   
     <hr>
@@ -60,5 +61,5 @@
       </button>
     </div>
   
-  </div>
+
 </div>

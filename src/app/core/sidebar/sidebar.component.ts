@@ -2,6 +2,9 @@ import { Component, OnInit } from '@angular/core';
 import { OdooService } from '../../services/odoo.service';
 import { MatSnackBar } from '@angular/material/snack-bar'; 
 import { ActivatedRoute, Router } from '@angular/router';
+import { MatDialog } from '@angular/material/dialog';
+import { CreateInstanceData, 
+  CreateInstanceDialogComponent } from '../create-instance-dialog/create-instance-dialog.component';
 @Component({
   selector: 'app-sidebar',
   standalone: false,
@@ -13,6 +16,8 @@ export class SidebarComponent implements OnInit {
   stagingBranches: any[] = [];
   developmentBranches: any[] = [];
   allInstances: any[] = [];
+  projectName!: string;
+  projectId!: number;
 
   selectedSource: any = null;
   selectedTarget: any = null;
@@ -22,7 +27,8 @@ export class SidebarComponent implements OnInit {
     private odooService: OdooService,
     private router: Router,
     private route: ActivatedRoute,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private dialog: MatDialog
   ) {}
 
   ngOnInit(): void {
@@ -31,6 +37,7 @@ export class SidebarComponent implements OnInit {
       if (currentUrl.includes('/projects/')) {
         this.showSidebar = true;
         const projectName = currentUrl.split('/projects/')[1];
+        this.projectId = Number(this.route.snapshot.paramMap.get('id'));
         this.loadInstancesByProject(projectName);
       } else {
         this.showSidebar = false;
@@ -53,6 +60,28 @@ export class SidebarComponent implements OnInit {
       }
     });
   }
+  openCreateDialog(): void {
+    const ref = this.dialog.open<
+    CreateInstanceDialogComponent,
+    CreateInstanceData>(CreateInstanceDialogComponent,{
+      width:'400px',
+      data: {
+        projectId: this.projectId,
+        projectName: this.projectName
+      }
+    }
+  );
+    ref.afterClosed().subscribe(instance =>{
+      if(instance) {
+        this.snackBar.open(
+          `Instancia "${instance.name}" creada correctamente`,
+          'Cerrar',
+          {duration: 3000}
+        );
+        this.loadInstancesByProject(this.projectName);
+      }
+    });
+  }
 
   loadInstances(): void {
     this.odooService.getInstances().subscribe({
@@ -69,7 +98,7 @@ export class SidebarComponent implements OnInit {
     });
   }
 
-  addOdooInstance(category: string): void {
+  /*addOdooInstance(category: string): void {
     const instanceName = prompt(`Ingrese el nombre de la nueva instancia en ${category}:`);
     if (instanceName) {
       const newTab = window.open("", "_blank");
@@ -101,6 +130,8 @@ export class SidebarComponent implements OnInit {
       });
     }
   }
+*/
+
 
   mergeBranches(): void {
     if (!this.selectedSource || !this.selectedTarget) {
