@@ -1,8 +1,10 @@
-import { Component, OnInit, ViewChild, ElementRef, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
-import { WebSocketSubject } from 'rxjs/webSocket';
-import { Subscription } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import { ProjectService } from '../../services/project.service';
+import { ActivatedRoute } from '@angular/router';
+import { OdooInstance } from '../../models/odoo-instance.model';
 
 @Component({
   selector: 'app-shell',
@@ -11,99 +13,103 @@ import { Subscription } from 'rxjs';
   styleUrls: ['./shell.component.css']
 })
 export class ShellComponent implements OnInit, OnDestroy {
-  @ViewChild('terminal', { static: true }) terminalDiv!: ElementRef;
   terminal!: Terminal;
   fitAddon!: FitAddon;
-  socket$!: WebSocketSubject<string>;
-  socketSubscription!: Subscription;
-  inputBuffer: string = "";
+  instances: OdooInstance[] = [];
+  selectedContainer: string = '';
+  projectName: string = '';
+  loadingLogs = false;
+  private intervalId: any;
+
+  constructor(
+    private http: HttpClient,
+    private projectService: ProjectService,
+    private route: ActivatedRoute
+  ) {}
 
   ngOnInit(): void {
     this.initTerminal();
-    this.connectWebSocket();
+
+    const currentUrl = window.location.pathname;
+    if (currentUrl.includes('/projects/')) {
+      const parts = currentUrl.split('/projects/')[1].split('/');
+      this.projectName = decodeURIComponent(parts[0]);
+
+      this.loadInstances();
+    } else {
+      this.terminal.writeln(' No se detectó un proyecto activo.');
+    }
+  }
+
+  ngOnDestroy(): void {
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+    }
   }
 
   initTerminal(): void {
     this.terminal = new Terminal({
-      cursorBlink: true,
       theme: { background: '#1e1e1e', foreground: '#ffffff' },
       fontSize: 14,
-      rows: 30,
-      cols: 80
+      disableStdin: true
     });
-
     this.fitAddon = new FitAddon();
     this.terminal.loadAddon(this.fitAddon);
-    this.terminal.open(this.terminalDiv.nativeElement);
-    this.fitAddon.fit();
 
-    this.terminal.writeln('Bienvenido al Shell Terminal');
-    this.showPrompt();
-
-    this.terminal.onKey((e) => {
-      const char = e.key;
-
-      if (char === '\r') {  // Enter
-        this.terminal.write('\r\n');
-        this.socket$.next(this.inputBuffer);  // Enviar al backend
-        this.inputBuffer = "";
-      } else if (char === '\u007f' || char === 'Backspace') {  // Backspace
-        if (this.inputBuffer.length > 0) {
-          this.inputBuffer = this.inputBuffer.slice(0, -1);
-          this.terminal.write('\b \b');
-        }
-      } else {
-        this.inputBuffer += char;
-        this.terminal.write(char);
-      }
-    });
+    const container = document.querySelector('.terminal');
+    if (container) this.terminal.open(container as HTMLElement);
   }
 
-  showPrompt(): void {
-    this.terminal.write('$ ');
-  }
-
-  connectWebSocket(): void {
-    this.socket$ = new WebSocketSubject({
-      url: 'ws://localhost:8080/ws/shell',
-      serializer: (msg: string) => msg,
-      deserializer: (event: MessageEvent) => event.data.toString(),
-      openObserver: {
-        next: () => {
-          console.log("WebSocket conectado.");
-          this.terminal.writeln('Conectado al shell.');
-          this.showPrompt();
-        }
+  loadInstances(): void {
+    this.projectService.getInstancesByProject(this.projectName).subscribe({
+      next: (res) => {
+        this.instances = res;
+        this.terminal.writeln(` Instancias encontradas: ${res.length}`);
       },
-      closeObserver: {
-        next: () => {
-          console.log("WebSocket cerrado. Intentando reconectar...");
-          this.terminal.writeln('\nWebSocket cerrado. Reconectando...');
-          setTimeout(() => this.connectWebSocket(), 3000);
-        }
+      error: () => {
+        this.terminal.writeln(' Error al cargar instancias.');
       }
     });
+  }
 
-    this.socketSubscription = this.socket$.subscribe({
-      next: (message) => {
-        console.log("Salida del shell:", message);
-        this.terminal.writeln(message);
-        this.showPrompt();
+  verLogs(containerName: string): void {
+    this.selectedContainer = containerName;
+    this.terminal.clear();
+    this.terminal.writeln(`📦 Viendo logs de: ${containerName}...`);
+
+    // Limpiar cualquier intervalo anterior
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+    }
+
+    // Cargar logs inicialmente
+    this.fetchLogs(containerName);
+
+    // Actualizar cada 5 segundos
+    this.intervalId = setInterval(() => {
+      this.fetchLogs(containerName);
+    }, 5000);
+  }
+
+  fetchLogs(containerName: string): void {
+    this.loadingLogs = true;
+    this.http.get(`http://localhost:8080/api/shell/logs?containerName=${encodeURIComponent(containerName)}`, {
+      responseType: 'text'
+    }).subscribe({
+      next: (logs) => {
+        this.terminal.clear(); // Borra y vuelve a mostrar todo
+        const lines = logs.split('\n');
+        for (const line of lines) {
+          this.terminal.writeln(line);
+        }
+        this.terminal.scrollToBottom();
+        this.loadingLogs = false;
       },
       error: (err) => {
-        console.error('WebSocket error:', err);
-        setTimeout(() => this.connectWebSocket(), 3000);
+        this.terminal.writeln('❌ Error al obtener logs.');
+        console.error(err);
+        this.loadingLogs = false;
       }
     });
   }
-
-  ngOnDestroy(): void {
-    if (this.socketSubscription) {
-      this.socketSubscription.unsubscribe();
-    }
-    if (this.socket$) {
-      this.socket$.complete();
-    }
-  }
-
 }

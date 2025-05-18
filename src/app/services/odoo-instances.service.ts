@@ -7,12 +7,11 @@ import { OdooInstance } from '../models/odoo-instance.model';
   providedIn: 'root'
 })
 export class OdooInstancesService {
-  private apiUrl = 'http://localhost:8080/api/instances';
+  private apiUrl = 'http://localhost:8080/api/odoo/instances';
 
   constructor(private http: HttpClient) {}
 
   getByProject(projectName: string): Observable<OdooInstance[]> {
-    const url = `${this.apiUrl}/by-project/${projectName}`;
-    return this.http.get<OdooInstance[]>(url);
+    return this.http.get<OdooInstance[]>(`${this.apiUrl}/by-project/${projectName}`);
   }
 }

@@ -1,21 +1,73 @@
 .dashboard-wrapper {
-    padding: 2rem;
+  padding: 1.5rem;
+  font-family: 'Segoe UI', sans-serif;
+  margin-left: 0;
+}
+
+@media screen and (min-width: 768px) {
+  .dashboard-wrapper {
+    margin-left: 220px;
   }
-  
-  .category-section {
-    margin-top: 2rem;
-  }
-  
-  .instances-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 1rem;
-  }
-  
-  .instance-card {
-    background: #fff;
-    padding: 1rem;
-    border-radius: 8px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-  }
-  
+}
+
+.project-header h2 {
+  margin-bottom: 0.2rem;
+  color: #2c3e50;
+}
+
+.project-header p {
+  margin-bottom: 1rem;
+  color: #34495e;
+}
+
+.loading {
+  color: #3498db;
+  font-style: italic;
+}
+
+.error {
+  color: #e74c3c;
+  font-weight: bold;
+}
+
+.category-wrapper {
+  margin-bottom: 2rem;
+}
+
+.category-title {
+  font-size: 1.2rem;
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
+  border-bottom: 2px solid #ecf0f1;
+}
+
+.instances-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.instance-card {
+  background: #f7f7f7;
+  padding: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  width: 200px;
+  transition: transform 0.2s;
+}
+
+.instance-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.instance-card h4 {
+  margin: 0 0 0.5rem 0;
+  font-weight: 600;
+}
+
+.instance-card a {
+  text-decoration: none;
+  color: #2980b9;
+  font-weight: bold;
+}

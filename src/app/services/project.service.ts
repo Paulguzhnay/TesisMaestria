@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { Project } from '../models/project.model';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { OdooInstance } from '../models/odoo-instance.model';
 @Injectable({
   providedIn: 'root'
 })
@@ -21,5 +22,11 @@ export class ProjectService {
 
   delete(id: number): Observable<void> {
   return this.http.delete<void>(`${this.apiUrl}/${id}`);
+}
+getInstancesByProject(projectName: string): Observable<OdooInstance[]> {
+  
+return this.http.get<OdooInstance[]>(`http://localhost:8080/api/odoo/instances/by-project/${projectName}`);
+
+
 }
 }

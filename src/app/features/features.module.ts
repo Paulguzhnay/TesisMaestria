@@ -23,7 +23,11 @@ import { ProjectCreateDialogComponent } from './project-create-dialog/project-cr
  
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatInputModule } from '@angular/material/input';
+import { ImportDatabaseComponent } from './import-database/import-database.component';
  
+import { MatSelectModule } from '@angular/material/select';
+import { MatOptionModule } from '@angular/material/core';
+import { LoginComponent } from './login/login.component';
 
 
 @NgModule({
@@ -35,7 +39,9 @@ import { MatInputModule } from '@angular/material/input';
     ProjectSetupComponent,
     ProjectDetailComponent,
     ProjectDashboardComponent,
-    ProjectCreateDialogComponent
+    ProjectCreateDialogComponent,
+    ImportDatabaseComponent,
+    LoginComponent
   ],
 
   imports: [
@@ -53,10 +59,12 @@ import { MatInputModule } from '@angular/material/input';
     MatTableModule,
     MatDialogModule,
     MatInputModule,
+    MatSelectModule,
+    MatOptionModule,
   ],
   exports: [
     DashboardComponent,
-    SettingsComponent
+    SettingsComponent,
     ]
 })
 export class FeaturesModule { }

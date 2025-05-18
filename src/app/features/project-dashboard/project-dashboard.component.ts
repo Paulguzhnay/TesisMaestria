@@ -4,6 +4,7 @@ import { ProjectService } from '../../services/project.service';
 import { OdooInstancesService } from '../../services/odoo-instances.service';
 import { Project } from '../../models/project.model';
 import { OdooInstance } from '../../models/odoo-instance.model';
+import { ProjectContextService } from '../../services/project-context.service';
 
 
 @Component({
@@ -22,12 +23,14 @@ export class ProjectDashboardComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private projectService: ProjectService,
-    private instanceService: OdooInstancesService
+    private instanceService: OdooInstancesService,
+    private projectContext: ProjectContextService 
   ) {}
 
   ngOnInit(): void {
     this.projectName = this.route.snapshot.paramMap.get('name') || '';
     if (this.projectName) {
+      this.projectContext.setProjectName(this.projectName);
       this.loadProject();
       this.loadInstances();
     }

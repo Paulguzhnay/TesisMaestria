@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { OdooInstance } from '../models/odoo-instance.model';
 
 @Injectable({
   providedIn: 'root'
@@ -30,8 +31,9 @@ mergeInstances(sourceName: string, targetName: string, category: string): Observ
   return this.http.post<string>(`${this.apiUrl}/merge`, payload, { responseType: 'text' as 'json' });
 }
 //---------------------
-getByProject(projectName: string): Observable<any[]> {
-  return this.http.get<any[]>(`${this.apiUrl}/instances/by-project/${encodeURIComponent(projectName)}`);
+getByProject(projectName: string): Observable<OdooInstance[]> {
+  const url = `http://localhost:8080/api/odoo/instances/by-project/${projectName}`;
+  return this.http.get<OdooInstance[]>(url);
 }
 }
 

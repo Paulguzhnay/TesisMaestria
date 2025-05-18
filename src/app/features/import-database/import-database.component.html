@@ -1,0 +1,18 @@
+<h2>📤 Importar Base de Datos</h2>
+
+<form (ngSubmit)="importDatabase()" #form="ngForm">
+  <mat-form-field appearance="fill" style="width: 100%;">
+    <mat-label>Selecciona una instancia</mat-label>
+    <mat-select [(ngModel)]="selectedInstance" name="instance" required>
+      <mat-option *ngFor="let inst of instances" [value]="inst">
+        {{ inst.name }} ({{ inst.category }})
+      </mat-option>
+    </mat-select>
+  </mat-form-field>
+
+  <input type="file" (change)="onFileSelected($event)" accept=".dump" required />
+
+  <button mat-raised-button color="primary" type="submit" [disabled]="!selectedFile || !selectedInstance">
+    Importar
+  </button>
+</form>

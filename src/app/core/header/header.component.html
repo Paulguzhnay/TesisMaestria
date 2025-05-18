@@ -3,13 +3,19 @@
     <div class="logo">
       <img src="assets/odooSH.png" alt="Odoo.sh">
     </div>
-    <ul class="menu">
-      <li><a routerLink="/dashboard">Dashboard</a></li>
-      <li><a routerLink="/settings">Settings</a></li>
-      <li><a routerLink="/shell">Shell</a></li>
-      <li><a routerLink="/github">Github</a></li>
-      <li><a routerLink="/backups">Backups</a></li>
-      <li><button (click)="logout()">Logout</button></li>
-    </ul>
+<ul class="menu">
+  <li><a routerLink="/dashboard">Proyectos</a></li>
+  <li *ngIf="projectName"><a [routerLink]="['/projects', projectName]" [queryParams]="{ id: projectId }">
+    Dashboard del Proyecto
+  </a>
+  </li>
+  <li><a [routerLink]="['/projects', projectName, 'shell']">Shell</a></li>
+  <li><a [routerLink]="['/projects', projectName, 'backups']">Backups</a></li>
+<li>
+  <a [routerLink]="['/projects', projectName, 'import']" [queryParams]="{ id: projectId }">
+    Importar Base de Datos
+  </a>
+</li>
+</ul>
   </nav>
 </header>

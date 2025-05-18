@@ -8,19 +8,22 @@ import { BackupsComponent } from './features/backups/backups.component';
 import { ProjectSetupComponent } from './features/project-setup/project-setup.component';
 import { ProjectDetailComponent } from './features/project-detail/project-detail.component';
 import { ProjectDashboardComponent } from './features/project-dashboard/project-dashboard.component';
-const routes: Routes = [
-  { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
-  { path: 'project-setup', component: ProjectSetupComponent },
-  { path: 'dashboard', component: DashboardComponent },
-  { path: 'settings', component: SettingsComponent },
-  { path: 'shell', component: ShellComponent },
-  { path: 'github', component: GithubComponent },
-  { path: 'backups', component: BackupsComponent },
-  { path: 'projects/:name', component: ProjectDetailComponent },
-  { path: '**', redirectTo: 'project-setup' },
-  { path: 'projects/:name', component: ProjectDashboardComponent },
-];
+import { ImportDatabaseComponent } from './features/import-database/import-database.component';
+import { LoginComponent } from './features/login/login.component';
 
+const routes: Routes = [
+  { path: '', redirectTo: 'login', pathMatch: 'full' },
+  { path: 'dashboard', component: DashboardComponent },
+  { path: 'project-setup', component: ProjectSetupComponent },
+  { path: 'projects/:name/settings', component: SettingsComponent },
+  { path: 'projects/:name/github', component: GithubComponent },
+  { path: 'projects/:name/backups', component: BackupsComponent },
+  { path: 'login', component: LoginComponent },
+  { path: 'projects/:name/shell', component: ShellComponent },
+  { path: 'projects/:name', component: ProjectDashboardComponent },
+  { path: 'projects/:name/import', component: ImportDatabaseComponent },
+  { path: '**', redirectTo: 'project-login' }
+];
 @NgModule({
   imports: [RouterModule.forRoot(routes)],
   exports: [RouterModule]

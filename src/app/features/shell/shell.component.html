@@ -1,5 +1,28 @@
-<div class="shell-container">
-  <h2>Shell Terminal</h2>
-  <div #terminal class="terminal"></div>
-</div>
+<div class="shell-wrapper">
+  <div class="selector-bar">
+    <label for="instancia"><strong>Selecciona una instancia:</strong></label>
+    <select id="instancia" [(ngModel)]="selectedContainer" (change)="verLogs(selectedContainer)">
+      <option [value]="''" disabled selected>-- Elige una instancia --</option>
+      <option *ngFor="let i of instances" [value]="'odoo_instance_' + i.category + '_' + i.name">
+        {{ i.name }} - {{ i.category }}
+      </option>
+    </select>
+  </div>
 
+  <div class="shell-container">
+    <div class="terminal-header">
+      <h2>🖥️ Logs de instancias Odoo</h2>
+    </div>
+
+    <div class="terminal-box">
+      <div class="terminal"></div>
+    </div>
+
+    <p *ngIf="!selectedContainer" class="empty-msg">
+      🔍 Selecciona una instancia para visualizar los logs.
+    </p>
+    <p *ngIf="loadingLogs" class="loading-msg">
+      ⏳ Cargando logs... por favor espera.
+    </p>
+  </div>
+</div>

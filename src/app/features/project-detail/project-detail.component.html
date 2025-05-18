@@ -7,8 +7,7 @@
     <div class="instances-grid" *ngIf="!loading && !error">
       <div *ngFor="let inst of instances" class="instance-card">
         <h3>{{ inst.name }}</h3>
-        <p>Estado: {{ inst.status }}</p>
-        <p>Versión: {{ inst.version }}</p>
+ 
         <p><a [href]="inst.url" target="_blank">Abrir</a></p>
       </div>
     </div>

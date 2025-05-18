@@ -23,73 +23,79 @@ export class DashboardComponent implements OnInit {
     private dialog: MatDialog,
     private snackBar: MatSnackBar) {}
 
-  ngOnInit(): void {
-    this.projectService.getAll().subscribe({
-      next: (projects) => {
-        this.projects = projects;
-      },
-      error: (error) => {
-        console.error('Error cargando proyectos:', error);
-        alert(' Error cargando proyectos');
-      }
-    });
-  }
-
-  goToProject(name: string): void {
-    this.router.navigate([`/projects/${encodeURIComponent(name)}`]);
-  }
-
-    openCreateDialog(): void {
-        const dialogRef = this.dialog.open(ProjectCreateDialogComponent, {
-          width: '400px'
+      ngOnInit(): void {
+        this.projectService.getAll().subscribe({
+          next: (projects) => {
+            this.projects = projects;
+          },
+          error: (error) => {
+            console.error('Error cargando proyectos:', error);
+            alert(' Error cargando proyectos');
+          }
         });
+      }
 
-      dialogRef.afterClosed().subscribe((result: Project | undefined) => {
-        if (result) {
-          this.projectService.create(result).subscribe({
-            next: (created) => {
-              this.snackBar.open('Proyecto creado', 'Cerrar', {
-                duration: 3000,
-                panelClass: 'snackbar-success'
-              });
-              this.projects.push(created);
-            },
-            error: (err) => {
-              console.error('Error al crear proyecto', err);
-              this.snackBar.open('Error al crear proyecto', 'Cerrar', {
-                duration: 3000,
-                panelClass: 'snackbar-error'
+      goToProject(name: string): void {
+        this.router.navigate([`/projects/${encodeURIComponent(name)}`]);
+      }
+
+        openCreateDialog(): void {
+            const dialogRef = this.dialog.open(ProjectCreateDialogComponent, {
+              width: '400px'
+            });
+
+          dialogRef.afterClosed().subscribe((result: Project | undefined) => {
+            if (result) {
+              this.projectService.create(result).subscribe({
+                next: (created) => {
+                  this.snackBar.open('Proyecto creado', 'Cerrar', {
+                    duration: 3000,
+                    panelClass: 'snackbar-success'
+                  });
+                  this.projects.push(created);
+                },
+                error: (err) => {
+                  console.error('Error al crear proyecto', err);
+                  this.snackBar.open('Error al crear proyecto', 'Cerrar', {
+                    duration: 3000,
+                    panelClass: 'snackbar-error'
+                  });
+                }
               });
             }
           });
-        }
-      });
-    } 
-deleteProject(project:Project): void {
-  const dialogRef = this.dialog.open(ConfirmDialogComponent, {
-    width: '350px',
-data: { projectName: project.name }
-  });
+        } 
+      deleteProject(project:Project): void {
+        const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+          width: '350px',
+      data: { projectName: project.name }
+        });
 
-  dialogRef.afterClosed().subscribe(result => {
-    if (result) {
-      this.projectService.delete(project.id!).subscribe({
-        next: () => {
-          this.projects = this.projects.filter(p => p.id !== project.id);
-          this.snackBar.open('Proyecto eliminado', 'Cerrar', {
-            duration: 3000,
-            panelClass: 'snackbar-success'
-          });
-        },
-        error: (err) => {
-          console.error('Error al eliminar proyecto', err);
-          this.snackBar.open('Error al eliminar proyecto', 'Cerrar', {
-            duration: 3000,
-            panelClass: 'snackbar-error'
-          });
-        }
-      });
-    }
-  });
-}
+        dialogRef.afterClosed().subscribe(result => {
+          if (result) {
+            this.projectService.delete(project.id!).subscribe({
+              next: () => {
+                this.projects = this.projects.filter(p => p.id !== project.id);
+                this.snackBar.open('Proyecto eliminado', 'Cerrar', {
+                  duration: 3000,
+                  panelClass: 'snackbar-success'
+                });
+              },
+              error: (err) => {
+                console.error('Error al eliminar proyecto', err);
+                this.snackBar.open('Error al eliminar proyecto', 'Cerrar', {
+                  duration: 3000,
+                  panelClass: 'snackbar-error'
+                });
+              }
+            });
+          }
+        });
+      }
+
+      abrirProyecto(project: Project): void {
+        this.router.navigate([`/projects/${project.name}`], {
+          queryParams: { id: project.id }
+        });
+      }
 }

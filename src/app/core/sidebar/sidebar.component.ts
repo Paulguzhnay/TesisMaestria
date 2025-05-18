@@ -5,6 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { CreateInstanceData, 
   CreateInstanceDialogComponent } from '../create-instance-dialog/create-instance-dialog.component';
+
 @Component({
   selector: 'app-sidebar',
   standalone: false,
@@ -21,52 +22,94 @@ export class SidebarComponent implements OnInit {
 
   selectedSource: any = null;
   selectedTarget: any = null;
-  showSidebar = false;
+ 
 
-  constructor(
-    private odooService: OdooService,
-    private router: Router,
-    private route: ActivatedRoute,
-    private snackBar: MatSnackBar,
-    private dialog: MatDialog
-  ) {}
+constructor(
+  private odooService: OdooService,
+  private router: Router,
+  private route: ActivatedRoute,
+  private snackBar: MatSnackBar,
+  private dialog: MatDialog
+) {
+   
+  this.router.events.subscribe(() => {
+    const current = this.router.url;
+    const urlTree = this.router.parseUrl(current);
+    const segments = urlTree.root.children['primary']?.segments;
 
-  ngOnInit(): void {
-    this.router.events.subscribe(() => {
-      const currentUrl = this.router.url;
-      if (currentUrl.includes('/projects/')) {
-        this.showSidebar = true;
-        const projectName = currentUrl.split('/projects/')[1];
-        this.projectId = Number(this.route.snapshot.paramMap.get('id'));
-        this.loadInstancesByProject(projectName);
-      } else {
-        this.showSidebar = false;
-        this.productionBranches = [];
-        this.stagingBranches = [];
-        this.developmentBranches = [];
+    const nameSegment = segments?.[1]?.path;  
+    const idParam = urlTree.queryParams['id'];
+
+    if (nameSegment) {
+      this.projectName = decodeURIComponent(nameSegment);
+      console.log(" Proyecto detectado (parseado manual):", this.projectName);
+    }
+
+    if (idParam) {
+      this.projectId = +idParam;
+      console.log(" ID del proyecto detectado (parseado manual):", this.projectId);
+    }
+
+    if (this.projectName && this.projectId) {
+      this.loadInstancesByProject(this.projectName);
+    }
+  });
+}
+
+
+      ngOnInit(): void {
+        console.log("✅ ngOnInit de SidebarComponent se ha ejecutado");
+        this.route.paramMap.subscribe(params => {
+          console.log("Parámetros de la ruta:", params.get('name'));
+          const nameFromRoute = params.get('name');
+          if (nameFromRoute) {
+            console.log("Nombre del proyecto desde la ruta:", nameFromRoute);
+            this.projectName = decodeURIComponent(nameFromRoute);
+            console.log("Proyecto detectado:", this.projectName);
+
+            this.route.queryParamMap.subscribe(queryParams => {
+              const idFromQuery = queryParams.get('id');
+              if (idFromQuery) {
+                this.projectId = +idFromQuery;
+                console.log("IID del proyecto detectado:", this.projectId);
+
+                //Ahora sí, ambos están listos
+                console.log("Cargando instancias para el proyecto:", this.projectName);
+                this.loadInstancesByProject(this.projectName);
+              }
+            });
+          }
+        });
       }
-    });
-  }
-  loadInstancesByProject(projectName: string): void {
-    this.odooService.getByProject(projectName).subscribe({
-      next: (instances) => {
-        this.allInstances = instances;
-        this.productionBranches = instances.filter(inst => inst.category === 'PRODUCTION');
-        this.stagingBranches = instances.filter(inst => inst.category === 'STAGING');
-        this.developmentBranches = instances.filter(inst => inst.category === 'DEVELOPMENT');
-      },
-      error: (error) => {
-        console.error('Error al cargar instancias:', error);
+
+
+
+ 
+
+      loadInstancesByProject(projectName: string): void {
+        console.log("Cargando instancias para el proyecto:", projectName);
+        this.odooService.getByProject(projectName).subscribe({
+          next: (instances) => {
+            console.log("Instancias cargadas:", instances);
+            this.allInstances = instances;
+            this.productionBranches = instances.filter(inst => inst.category === 'PRODUCTION');
+            this.stagingBranches = instances.filter(inst => inst.category === 'STAGING');
+            this.developmentBranches = instances.filter(inst => inst.category === 'DEVELOPMENT');
+          },
+          error: (error) => {
+            console.error('Error al cargar instancias:', error);
+          }
+        });
       }
-    });
-  }
+
+
   openCreateDialog(): void {
     const ref = this.dialog.open<
     CreateInstanceDialogComponent,
     CreateInstanceData>(CreateInstanceDialogComponent,{
       width:'400px',
       data: {
-        projectId: this.projectId,
+        projectId: this.projectId,  
         projectName: this.projectName
       }
     }
@@ -84,6 +127,7 @@ export class SidebarComponent implements OnInit {
   }
 
   loadInstances(): void {
+    console.log("Cargando todas las instancias...");
     this.odooService.getInstances().subscribe({
       next: (instances) => {
         this.allInstances = instances;
@@ -169,5 +213,7 @@ export class SidebarComponent implements OnInit {
       }
     });
   }
+
+ 
   
 }

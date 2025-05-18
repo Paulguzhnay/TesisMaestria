@@ -1,18 +1,31 @@
 import { Component } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, NavigationEnd,UrlTree} from '@angular/router';
+import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-root',
+   standalone: false,
   templateUrl: './app.component.html',
-  standalone: false,
   styleUrl: './app.component.css'
 })
 export class AppComponent {
-  constructor(public router: Router) {}
   title = 'frontend';
+  currentUrl: string = '';
+
+  constructor(public router: Router) {
+ 
+    this.router.events.pipe(
+      filter(event => event instanceof NavigationEnd)
+    ).subscribe((event: any) => {
+      this.currentUrl = event.urlAfterRedirects;
+    });
+  }
 
   showSidebar(): boolean {
-    
-    return !this.router.url.includes('/dashboard') && !this.router.url.includes('/project-setup');
+     
+    const tree: UrlTree = this.router.parseUrl(this.currentUrl);
+    const segments = tree.root.children['primary']?.segments.map(s => s.path) || [];
+
+    return segments[0] === 'projects';
   }
 }
