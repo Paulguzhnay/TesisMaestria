@@ -8,12 +8,15 @@ import ec.edu.ups.Backend.repository.ProjectRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import jakarta.annotation.PostConstruct;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -427,14 +430,6 @@ public class DockerService {
         }
     }
 
-
-
-
-
-
-
-
-
     //-----------------------
     private String getContainerName(String instanceName, String category, boolean isDatabase) {
         try {
@@ -617,8 +612,7 @@ public class DockerService {
         }
     }
 
-
-    private boolean runCmd(String command) {
+    private boolean runCmd(String command) throws IOException {
         try {
             System.out.println("🛠️ Ejecutando: " + command);
             Process process = new ProcessBuilder("cmd.exe", "/c", command)
@@ -696,8 +690,6 @@ public class DockerService {
         return false;
     }
 
-
-
     private int findMappedPort(String containerName) {
         try {
             System.out.println("🔎 Buscando puerto expuesto de " + containerName);
@@ -723,9 +715,35 @@ public class DockerService {
         }
     }
 
-
     public List<OdooInstance> getInstancesByProject(String projectName) {
         return odooInstanceRepository.findByProjectName(projectName);
     }
+//------
+public String importDatabaseFromFile(MultipartFile file, String dbName, String category) throws IOException {
+    // 1. Guardar archivo temporal
+    Path tempPath = Files.createTempFile("upload-", ".dump");
+    file.transferTo(tempPath.toFile());
+
+    String containerDbName = "odoo_shared_db";
+    String containerFilePath = "/tmp/" + file.getOriginalFilename();
+
+    try {
+        System.out.println("📦 Copiando dump al contenedor...");
+        runCmd(String.format("docker cp %s %s:%s", tempPath, containerDbName, containerFilePath));
+
+        System.out.println("🗑️ Eliminando base si existe...");
+        runCmd(String.format("docker exec %s dropdb %s --if-exists -U odoo", containerDbName, dbName));
+
+        System.out.println("📚 Creando nueva base...");
+        runCmd(String.format("docker exec %s createdb %s -U odoo", containerDbName, dbName));
+
+        System.out.println("🔁 Restaurando dump...");
+        runCmd(String.format("docker exec %s pg_restore -U odoo -d %s %s", containerDbName, dbName, containerFilePath));
+    } finally {
+        Files.deleteIfExists(tempPath);
+    }
+
+    return "✅ Base de datos restaurada exitosamente.";
+}
 
 }

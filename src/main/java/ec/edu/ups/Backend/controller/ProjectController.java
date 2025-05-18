@@ -3,6 +3,7 @@ package ec.edu.ups.Backend.controller;
 import ec.edu.ups.Backend.model.Project;
 import ec.edu.ups.Backend.repository.ProjectRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,5 +24,14 @@ public class ProjectController {
     @PostMapping
     public Project create(@RequestBody Project project) {
         return projectRepo.save(project);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteProject(@PathVariable Long id) {
+        if (!projectRepo.existsById(id)) {
+            return ResponseEntity.notFound().build();
+        }
+        projectRepo.deleteById(id);
+        return ResponseEntity.noContent().build();
     }
 }
