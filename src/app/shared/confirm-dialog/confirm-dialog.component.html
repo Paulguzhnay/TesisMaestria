@@ -1,0 +1,9 @@
+<h2 mat-dialog-title>Confirmación</h2>
+<mat-dialog-content>
+  ¿Estás seguro de eliminar el proyecto <strong>{{ data.projectName }}</strong>?
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancel()">Cancelar</button>
+  <button mat-flat-button color="warn" (click)="confirm()">Eliminar</button>
+</mat-dialog-actions>

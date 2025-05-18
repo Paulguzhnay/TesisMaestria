@@ -12,7 +12,7 @@ export class AppComponent {
   title = 'frontend';
 
   showSidebar(): boolean {
-    // Ocultar el sidebar si la ruta actual es /dashboard o /project-setup
+    
     return !this.router.url.includes('/dashboard') && !this.router.url.includes('/project-setup');
   }
 }

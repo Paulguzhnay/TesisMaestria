@@ -18,4 +18,8 @@ export class ProjectService {
   create(project: Project): Observable<Project> {
     return this.http.post<Project>(this.apiUrl, project);
   }
+
+  delete(id: number): Observable<void> {
+  return this.http.delete<void>(`${this.apiUrl}/${id}`);
+}
 }

@@ -1,0 +1,18 @@
+<h2>Crear Nuevo Proyecto</h2>
+
+<form>
+  <mat-form-field appearance="fill" class="full-width">
+    <mat-label>Nombre del proyecto</mat-label>
+    <input matInput [(ngModel)]="project.name" name="name" required />
+  </mat-form-field>
+
+  <mat-form-field appearance="fill" class="full-width">
+    <mat-label>Versión</mat-label>
+    <input matInput [(ngModel)]="project.version" name="version" />
+  </mat-form-field>
+
+  <div class="actions">
+    <button mat-button (click)="cancel()">Cancelar</button>
+    <button mat-flat-button color="primary" (click)="save()">Crear</button>
+  </div>
+</form>

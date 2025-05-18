@@ -1,24 +1,25 @@
 <div class="dashboard-wrapper">
   <h1>Mis Proyectos</h1>
 
+  <!-- Botón para mostrar/ocultar el formulario -->
+  <button class="create-btn" (click)="openCreateDialog()">+ Crear nuevo proyecto</button>
+
+ 
+  <!-- Lista de proyectos -->
   <div class="project-grid">
     <div class="project-card" *ngFor="let project of projects">
       <h3>{{ project.name }}</h3>
-
       <ul>
         <li><strong>Versión:</strong> {{ project.version }}</li>
-        <li><strong>Licencia:</strong> {{ project.license || 'N/A' }}</li>
-        <li><strong>Estado:</strong> {{ project.status }}</li>
-        <li><strong>Ubicación:</strong> {{ project.location }}</li>
       </ul>
-
       <div class="card-actions">
-        <button>Configuración</button>
-        <button>GitHub</button>
-        <a 
-          class="open-btn"
-          [routerLink]="['/projects', project.name]"
-          >Abrir</a>
+        <a class="open-btn" [routerLink]="['/projects', project.name]">Abrir</a>
+          <button 
+              class="delete-btn" 
+              *ngIf="project.id !== undefined" 
+              (click)="deleteProject(project)">
+              Eliminar
+        </button>
       </div>
     </div>
   </div>
