@@ -3,6 +3,7 @@ package ec.edu.ups.Backend.service;
 import ec.edu.ups.Backend.model.BackupInfo;
 import ec.edu.ups.Backend.model.OdooInstance;
 import ec.edu.ups.Backend.model.Project;
+import ec.edu.ups.Backend.model.User;
 import ec.edu.ups.Backend.repository.OdooInstanceRepository;
 import ec.edu.ups.Backend.repository.ProjectRepository;
 import org.springframework.beans.factory.annotation.Value;
@@ -326,9 +327,13 @@ public class DockerService {
         return exitCode == 0;
     }
 
-    public List<BackupInfo> getBackups() {
-        File directory = new File(backupDir);
 
+
+    /// //////////////////
+    public List<BackupInfo> getBackupsForUser(String username) {
+        List<OdooInstance> instances = odooInstanceRepository.findByProjectUserUsername(username);
+
+        File directory = new File(backupDir);
         if (!directory.exists()) {
             boolean created = directory.mkdirs();
             if (!created) {
@@ -342,32 +347,45 @@ public class DockerService {
             return List.of();
         }
 
-        return Arrays.stream(files)
-                .filter(File::isFile)
-                .map(file -> {
-                    String name = file.getName();
+        List<BackupInfo> backups = new ArrayList<>();
+        for (File file : files) {
+            for (OdooInstance instance : instances) {
+                String instanceName = instance.getName();
+                String category = instance.getCategory();
 
-                    // Extraer timestamp del nombre del archivo (ejemplo: Backup-1743698454290.zip)
-                    long timestamp = name.matches(".*\\d+.*") ?
-                            Long.parseLong(name.replaceAll("\\D", "")) :
-                            file.lastModified();
+                if (file.getName().contains(instanceName) && file.getName().contains(category)) {
+                    long timestamp = file.getName().matches(".*\\d+.*")
+                            ? Long.parseLong(file.getName().replaceAll("\\D", ""))
+                            : file.lastModified();
 
-                    return new BackupInfo(
-                            name,
+                    backups.add(new BackupInfo(
+                            file.getName(),
                             Instant.ofEpochMilli(timestamp),
-                            "Desconocido",  // No se puede determinar desde el nombre del archivo
-                            "15.0",         // Suposición, modificar según sea necesario
-                            name.contains("Auto") ? "Automático" : "Manual",
-                            "N/A"           // No hay información de revisión
-                    );
-                })
-                .collect(Collectors.toList());
+                            category,
+                            "15.0",
+                            file.getName().contains("Auto") ? "Automático" : "Manual",
+                            "N/A"
+                    ));
+                }
+            }
+        }
+
+        return backups;
     }
 
+    /// /////////////////////
 
+    public String createBackup(String username, Long projectId, String instanceName, String category) {
+        // 🔐 Validar que el proyecto pertenece al usuario autenticado
+        Project project = projectRepository.findById(projectId)
+                .filter(p -> p.getUser().getUsername().equals(username))
+                .orElse(null);
 
+        if (project == null) {
+            return "❌ Proyecto no válido para el usuario autenticado.";
+        }
 
-    public String createBackup(Long projectId, String instanceName, String category) {
+        // 🔎 Buscar instancia dentro del proyecto
         List<OdooInstance> matches = odooInstanceRepository.findAllByNameAndProjectId(instanceName, projectId);
 
         if (matches.isEmpty()) {
@@ -395,7 +413,7 @@ public class DockerService {
         String odooBackupFilePath = backupDir + File.separator + String.format("odoo_data_%s_%s_%s.tar.gz", category.toUpperCase(), instanceName, timestamp);
 
         try {
-            // Backup base de datos
+            // 🔄 Backup base de datos
             String dbBackupPathInContainer = String.format("/tmp/db_backup_%s_%s_%s.dump", category.toUpperCase(), instanceName, timestamp);
             String dbDumpCommand = String.format(
                     "docker exec %s pg_dump -U %s -d %s -Fc -f %s",
@@ -406,7 +424,7 @@ public class DockerService {
                     dbContainerName, dbBackupPathInContainer, dbBackupFilePath
             );
 
-            // Backup de Odoo
+            // 🗃️ Backup del filestore de Odoo
             String odooBackupPathInContainer = String.format("/tmp/odoo_data_%s_%s_%s.tar.gz", category.toUpperCase(), instanceName, timestamp);
             String odooBackupCommand = "docker exec " + odooContainerName +
                     " tar -czf " + odooBackupPathInContainer + " -C /var/lib/odoo .";
@@ -429,6 +447,52 @@ public class DockerService {
             return "❌ Error al crear el backup: " + e.getMessage();
         }
     }
+
+
+
+
+    /// //////////////////////
+    public List<BackupInfo> getBackups(User user) {
+        File directory = new File(backupDir);
+
+        if (!directory.exists() && !directory.mkdirs()) {
+            System.err.println("No se pudo crear la carpeta de backups: " + backupDir);
+            return List.of();
+        }
+
+        File[] files = directory.listFiles();
+        if (files == null || files.length == 0) {
+            return List.of();
+        }
+
+        return Arrays.stream(files)
+                .filter(File::isFile)
+                .filter(file -> {
+                    // Filtrar archivos por instancia que pertenezca a un proyecto del usuario
+                    List<OdooInstance> userInstances = odooInstanceRepository.findByProjectUserUsername(user.getUsername());
+
+                    return userInstances.stream().anyMatch(instance -> file.getName().contains(instance.getName()));
+                })
+                .map(file -> {
+                    String name = file.getName();
+                    long timestamp = name.matches(".*\\d+.*") ?
+                            Long.parseLong(name.replaceAll("\\D", "")) :
+                            file.lastModified();
+                    return new BackupInfo(
+                            name,
+                            Instant.ofEpochMilli(timestamp),
+                            "Desconocido",
+                            "15.0",
+                            name.contains("Auto") ? "Automático" : "Manual",
+                            "N/A"
+                    );
+                })
+                .collect(Collectors.toList());
+    }
+
+
+
+
 
     //-----------------------
     private String getContainerName(String instanceName, String category, boolean isDatabase) {
@@ -460,7 +524,13 @@ public class DockerService {
 
     //-----------------v1
 
-    public String restoreBackup(Long projectId, String instanceName, String category, String dbBackupFileName, String odooBackupFileName) {
+    public String restoreBackup(String username, Long projectId, String instanceName, String category, String dbBackupFileName, String odooBackupFileName) {
+        // Validar que el proyecto pertenece al usuario
+        Optional<Project> projectOpt = projectRepository.findById(projectId);
+        if (projectOpt.isEmpty() || !projectOpt.get().getUser().getUsername().equals(username)) {
+            return "❌ No tienes permiso para restaurar en este proyecto.";
+        }
+
         List<OdooInstance> instances = odooInstanceRepository.findAllByNameAndProjectId(instanceName, projectId);
 
         if (instances.isEmpty()) {
@@ -480,6 +550,7 @@ public class DockerService {
         }
 
         try {
+            // Comandos para restaurar base de datos
             String terminateCmd = String.format(
                     "docker exec %s psql -U %s -d postgres -c \"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '%s' AND pid <> pg_backend_pid();\"",
                     dbContainer, postgresUser, instanceName);
@@ -498,6 +569,7 @@ public class DockerService {
                             executeCommand(new String[]{"cmd.exe", "/c", copyDbCmd}) &&
                             executeCommand(new String[]{"cmd.exe", "/c", restoreCmd});
 
+            // Comandos para restaurar archivos Odoo
             String copyOdooCmd = String.format("docker cp \"%s\" %s:/tmp/restore.tar.gz", odooFile, odooContainer);
             String extractOdooCmd = String.format("docker exec %s tar -xzf /tmp/restore.tar.gz -C /var/lib/odoo", odooContainer);
 
@@ -514,6 +586,10 @@ public class DockerService {
             return "❌ Error durante el restore: " + e.getMessage();
         }
     }
+
+
+
+
 
     public String mergeOdooInstances(Long projectId, String sourceInstance, String targetInstance) {
         try {
@@ -745,5 +821,57 @@ public String importDatabaseFromFile(MultipartFile file, String dbName, String c
 
     return "✅ Base de datos restaurada exitosamente.";
 }
+
+
+//SHEL DB
+public String executeSqlCommandInInstance(String command, String instanceName, String category) {
+    String containerName = String.format("odoo_instance_%s_%s_db", category.toUpperCase(), instanceName);
+
+    // Seguridad: bloquea comandos peligrosos
+    String lower = command.trim().toLowerCase();
+    if (lower.matches("^(drop|delete|alter|truncate|update).*")) {
+        return "❌ Comando no permitido por seguridad.";
+    }
+
+    try {
+        // Escapar comillas dobles
+        String escapedCommand = command.replace("\"", "\\\"");
+
+        String dockerCommand = String.format(
+                "docker exec -i %s psql -U %s -d %s -q -t -c \"%s\"",
+                containerName, postgresUser, instanceName, escapedCommand
+        );
+
+        boolean isWindows = System.getProperty("os.name").toLowerCase().contains("win");
+        String[] shellCmd = isWindows
+                ? new String[]{"cmd.exe", "/c", dockerCommand}
+                : new String[]{"/bin/sh", "-c", dockerCommand};
+
+        ProcessBuilder builder = new ProcessBuilder(shellCmd);
+        builder.redirectErrorStream(true);
+        Process process = builder.start();
+
+        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+        StringBuilder output = new StringBuilder();
+        String line;
+        while ((line = reader.readLine()) != null) {
+            output.append(line).append("\n");
+        }
+
+        int exitCode = process.waitFor();
+        if (exitCode != 0) {
+            return "❌ Error al ejecutar el comando. Código de salida: " + exitCode + "\n" + output;
+        }
+
+        return output.toString().trim().isEmpty()
+                ? "✅ Comando ejecutado, sin salida."
+                : output.toString().trim();
+
+    } catch (Exception e) {
+        return "❌ Excepción al ejecutar el comando: " + e.getMessage();
+    }
+}
+
+
 
 }

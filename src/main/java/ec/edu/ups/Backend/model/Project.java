@@ -16,6 +16,10 @@ public class Project {
     private String version;
     private String location; // "Europe", "Americas", etc.
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
+
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OdooInstance> instances;
 
@@ -75,5 +79,13 @@ public class Project {
 
     public void setInstances(List<OdooInstance> instances) {
         this.instances = instances;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
     }
 }

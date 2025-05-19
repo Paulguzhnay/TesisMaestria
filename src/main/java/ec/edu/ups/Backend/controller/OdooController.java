@@ -1,10 +1,12 @@
 package ec.edu.ups.Backend.controller;
+
 import ec.edu.ups.Backend.model.MergeRequest;
 import ec.edu.ups.Backend.model.OdooInstance;
+import ec.edu.ups.Backend.repository.OdooInstanceRepository;
 import ec.edu.ups.Backend.service.DockerService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.beans.factory.annotation.Autowired;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,8 +15,13 @@ import java.util.Map;
 @RequestMapping("/api/odoo")
 public class OdooController {
 
-    @Autowired
-    private DockerService dockerService;
+    private final DockerService dockerService;
+    private final OdooInstanceRepository odooInstanceRepository;
+
+    public OdooController(DockerService dockerService, OdooInstanceRepository odooInstanceRepository) {
+        this.dockerService = dockerService;
+        this.odooInstanceRepository = odooInstanceRepository;
+    }
 
     @PostMapping("/create")
     public Map<String, String> createInstance(@RequestBody InstanceRequest request) {
@@ -44,7 +51,7 @@ public class OdooController {
     static class InstanceRequest {
         private String name;
         private String category;
-        private Long projectId; // 🆕
+        private Long projectId;
 
         public String getName() { return name; }
         public void setName(String name) { this.name = name; }
@@ -57,8 +64,15 @@ public class OdooController {
     }
 
     @GetMapping("/instances")
-    public List<OdooInstance> getInstances() {
-        return dockerService.getAllInstances();
+    public ResponseEntity<List<OdooInstance>> getInstances(Authentication auth) {
+        try {
+            String username = auth.getName();
+            List<OdooInstance> instances = odooInstanceRepository.findByProjectUserUsername(username);
+            return ResponseEntity.ok(instances);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).build();
+        }
     }
 
     @PostMapping("/merge")
@@ -89,4 +103,7 @@ public class OdooController {
             return ResponseEntity.status(500).build();
         }
     }
+
+
+
 }

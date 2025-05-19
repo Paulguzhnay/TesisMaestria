@@ -2,13 +2,17 @@
 package ec.edu.ups.Backend.controller;
 
 import ec.edu.ups.Backend.model.BackupInfo;
+import ec.edu.ups.Backend.model.User;
+import ec.edu.ups.Backend.repository.UserRepository;
 import ec.edu.ups.Backend.service.DockerService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.MediaType;
 import org.springframework.web.multipart.MultipartFile;
@@ -20,34 +24,54 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 
 @RestController
 @RequestMapping("/docker")
 public class DockerController {
+    @Autowired
+    private DockerService dockerService;
 
-    private final DockerService dockerService;
+    @Autowired
+    private UserRepository userRepo;
+
+
+
+
 
     public DockerController(DockerService dockerService) {
         this.dockerService = dockerService;
     }
 
     @GetMapping("/backups")
-    public List<BackupInfo> getBackups() {
-        return dockerService.getBackups();
+    public ResponseEntity<List<BackupInfo>> getBackups(Authentication authentication) {
+        String username = authentication.getName();
+        Optional<User> userOpt = userRepo.findByUsername(username);
+
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        List<BackupInfo> backups = dockerService.getBackupsForUser(username);
+        return ResponseEntity.ok(backups);
     }
 
-    @PostMapping("/backup")
-    public ResponseEntity<String> backupInstance(@RequestBody Map<String, String> request) {
-        System.out.println("📥 Request recibida: " + request);
 
+    @PostMapping("/backup")
+    public ResponseEntity<String> backupInstance(@RequestBody Map<String, String> request, Authentication authentication) {
         try {
             Long projectId = Long.parseLong(request.get("projectId"));
             String instanceName = request.get("name");
             String category = request.get("category");
 
-            String response = dockerService.createBackup(projectId, instanceName, category);
-            return response.startsWith("Backup creado")
+            // 🔐 Extraer el nombre de usuario autenticado
+            String username = authentication.getName();
+
+            // ✅ Llamar al método actualizado del servicio
+            String response = dockerService.createBackup(username, projectId, instanceName, category);
+
+            return response.startsWith("✅")
                     ? ResponseEntity.ok(response)
                     : ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
 
@@ -57,10 +81,9 @@ public class DockerController {
         }
     }
 
-    @PostMapping("/restore-specific")
-    public ResponseEntity<String> restoreSpecific(@RequestBody Map<String, String> payload) {
-        System.out.println("📥 Payload: " + payload);
 
+    @PostMapping("/restore-specific")
+    public ResponseEntity<String> restoreSpecific(@RequestBody Map<String, String> payload, Authentication authentication) {
         try {
             Long projectId = Long.parseLong(payload.get("projectId"));
             String instance = payload.get("name");
@@ -68,7 +91,10 @@ public class DockerController {
             String dbFile = payload.get("dbBackupFileName");
             String odooFile = payload.get("odooBackupFileName");
 
-            String result = dockerService.restoreBackup(projectId, instance, category, dbFile, odooFile);
+            String username = authentication.getName(); // 👤 Extraer nombre del usuario autenticado
+
+            String result = dockerService.restoreBackup(username, projectId, instance, category, dbFile, odooFile);
+
             return result.startsWith("✅")
                     ? ResponseEntity.ok(result)
                     : ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
@@ -78,6 +104,7 @@ public class DockerController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("❌ Error en los datos enviados.");
         }
     }
+
 
     @GetMapping("/download/{fileName}")
     public ResponseEntity<Resource> downloadBackup(@PathVariable String fileName) throws IOException {
@@ -117,7 +144,7 @@ public class DockerController {
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("❌ Error al importar base de datos: " + e.getMessage());
+                    .body(" Error al importar base de datos: " + e.getMessage());
         }
     }
 
