@@ -23,17 +23,17 @@ export class DashboardComponent implements OnInit {
     private dialog: MatDialog,
     private snackBar: MatSnackBar) {}
 
-      ngOnInit(): void {
-        this.projectService.getAll().subscribe({
-          next: (projects) => {
-            this.projects = projects;
-          },
-          error: (error) => {
-            console.error('Error cargando proyectos:', error);
-            alert(' Error cargando proyectos');
-          }
-        });
-      }
+    ngOnInit(): void {
+      this.projectService.getByUser().subscribe({
+        next: (projects) => {
+          this.projects = projects;
+        },
+        error: (error) => {
+          console.error('Error cargando proyectos:', error);
+          alert(' Error cargando proyectos');
+        }
+      });
+    }
 
       goToProject(name: string): void {
         this.router.navigate([`/projects/${encodeURIComponent(name)}`]);
@@ -93,9 +93,15 @@ export class DashboardComponent implements OnInit {
         });
       }
 
-      abrirProyecto(project: Project): void {
-        this.router.navigate([`/projects/${project.name}`], {
-          queryParams: { id: project.id }
-        });
-      }
+    abrirProyecto(project: Project): void {
+      this.router.navigate([`/projects/${project.name}/backups`], {
+        queryParams: { id: project.id }
+      });
+    }
+
+      // Método de logout
+    logout(): void {
+      localStorage.removeItem('token'); // o el nombre exacto de tu token
+      this.router.navigate(['/login']); // Ajusta la ruta si tu login está en otra
+    }
 }

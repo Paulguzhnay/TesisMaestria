@@ -40,16 +40,15 @@ constructor(private backupService: BackupService, private router: Router,
 
       this.loadBackups();
     }
-  loadBackups() {
-    this.backupService.getBackups().subscribe((data: string[]) => {
-      this.backups = data;
-    });
-  }
+loadBackups() {
+  this.backupService.getBackups().subscribe((data) => {
+    this.backups = data.map(b => b.name);  
+  });
+}
 
   // Método de logout
-  logout() {
-
-    console.log('Logging out...');
-
-  }
+logout(): void {
+  localStorage.removeItem('token'); // o el nombre exacto de tu token
+  this.router.navigate(['/login']); // Ajusta la ruta si tu login está en otra
+}
 }

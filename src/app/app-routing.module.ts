@@ -10,7 +10,7 @@ import { ProjectDetailComponent } from './features/project-detail/project-detail
 import { ProjectDashboardComponent } from './features/project-dashboard/project-dashboard.component';
 import { ImportDatabaseComponent } from './features/import-database/import-database.component';
 import { LoginComponent } from './features/login/login.component';
-
+import { ShellDbComponent } from './features/shell-db/shell-db.component';
 const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
   { path: 'dashboard', component: DashboardComponent },
@@ -19,9 +19,10 @@ const routes: Routes = [
   { path: 'projects/:name/github', component: GithubComponent },
   { path: 'projects/:name/backups', component: BackupsComponent },
   { path: 'login', component: LoginComponent },
-  { path: 'projects/:name/shell', component: ShellComponent },
+  { path: 'projects/:name/logs', component: ShellComponent },
   { path: 'projects/:name', component: ProjectDashboardComponent },
   { path: 'projects/:name/import', component: ImportDatabaseComponent },
+  { path: 'projects/:name/shelldb', component: ShellDbComponent },
   { path: '**', redirectTo: 'project-login' }
 ];
 @NgModule({

@@ -22,7 +22,7 @@ export class ProjectCreateDialogComponent {
     if (this.project.name?.trim()) {
       this.dialogRef.close(this.project);
     } else {
-      alert('❌ El nombre del proyecto es requerido');
+      alert(' El nombre del proyecto es requerido');
     }
   }
 

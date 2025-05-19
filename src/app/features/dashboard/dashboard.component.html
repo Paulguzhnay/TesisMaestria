@@ -1,10 +1,14 @@
 <div class="dashboard-wrapper">
-  <h1>Mis Proyectos</h1>
 
-  <!-- Botón para mostrar/ocultar el formulario -->
+  <!-- Título y Logout alineados -->
+  <div class="header-bar">
+    <h1>Mis Proyectos</h1>
+    <button class="logout-btn" (click)="logout()">Cerrar sesión</button>
+  </div>
+
+  <!-- Botón para crear nuevo proyecto -->
   <button class="create-btn" (click)="openCreateDialog()">+ Crear nuevo proyecto</button>
 
- 
   <!-- Lista de proyectos -->
   <div class="project-grid">
     <div class="project-card" *ngFor="let project of projects">
@@ -14,13 +18,14 @@
       </ul>
       <div class="card-actions">
         <a class="open-btn" (click)="abrirProyecto(project)">Abrir</a>
-          <button 
-              class="delete-btn" 
-              *ngIf="project.id !== undefined" 
-              (click)="deleteProject(project)">
-              Eliminar
+        <button 
+          class="delete-btn" 
+          *ngIf="project.id !== undefined" 
+          (click)="deleteProject(project)">
+          Eliminar
         </button>
       </div>
     </div>
   </div>
+
 </div>

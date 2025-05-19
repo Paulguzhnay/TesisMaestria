@@ -26,7 +26,10 @@ export class ProjectService {
 getInstancesByProject(projectName: string): Observable<OdooInstance[]> {
   
 return this.http.get<OdooInstance[]>(`http://localhost:8080/api/odoo/instances/by-project/${projectName}`);
-
-
 }
+
+getByUser(): Observable<Project[]> {
+  return this.http.get<Project[]>(`http://localhost:8080/api/projects`);
+}
+
 }

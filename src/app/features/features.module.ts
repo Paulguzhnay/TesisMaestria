@@ -28,6 +28,9 @@ import { ImportDatabaseComponent } from './import-database/import-database.compo
 import { MatSelectModule } from '@angular/material/select';
 import { MatOptionModule } from '@angular/material/core';
 import { LoginComponent } from './login/login.component';
+import { ShellDbComponent } from './shell-db/shell-db.component';
+
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 
 @NgModule({
@@ -41,7 +44,8 @@ import { LoginComponent } from './login/login.component';
     ProjectDashboardComponent,
     ProjectCreateDialogComponent,
     ImportDatabaseComponent,
-    LoginComponent
+    LoginComponent,
+    ShellDbComponent
   ],
 
   imports: [
@@ -61,6 +65,7 @@ import { LoginComponent } from './login/login.component';
     MatInputModule,
     MatSelectModule,
     MatOptionModule,
+    MatProgressSpinnerModule,
   ],
   exports: [
     DashboardComponent,

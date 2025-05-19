@@ -9,12 +9,22 @@
     Dashboard del Proyecto
   </a>
   </li>
-  <li><a [routerLink]="['/projects', projectName, 'shell']">Shell</a></li>
+  <li><a [routerLink]="['/projects', projectName, 'logs']" [queryParams]="{ id: projectId }">Logs</a></li>
+  <li>
+  <a [routerLink]="['/projects', projectName, 'shelldb']" [queryParams]="{ id: projectId }">
+    Shell
+  </a>
+</li>
   <li><a [routerLink]="['/projects', projectName, 'backups']">Backups</a></li>
 <li>
   <a [routerLink]="['/projects', projectName, 'import']" [queryParams]="{ id: projectId }">
     Importar Base de Datos
   </a>
+</li>
+<li>
+<button mat-button   (click)="logout()">
+   Cerrar sesión
+</button>
 </li>
 </ul>
   </nav>

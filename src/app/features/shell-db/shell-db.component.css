@@ -1,0 +1,26 @@
+.shell-container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.full-width {
+  width: 100%;
+}
+
+ 
+pre {
+  background-color: #1e1e1e;
+  color: #c7c7c7;
+  padding: 15px;
+  border-radius: 5px;
+  font-family: monospace;
+  white-space: pre-wrap;
+  max-height: 400px;
+  overflow-y: auto;
+  box-shadow: 0 0 5px #00000055;
+}
+
+.error-output {
+  color: #ff6b6b;
+}
+
