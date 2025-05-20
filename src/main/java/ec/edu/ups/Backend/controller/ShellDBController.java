@@ -28,4 +28,6 @@ public class ShellDBController {
         String output = dockerService.executeSqlCommandInInstance(command, instanceName, category);
         return ResponseEntity.ok(output);
     }
+
+
 }

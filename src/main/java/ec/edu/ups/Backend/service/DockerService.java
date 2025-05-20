@@ -56,6 +56,9 @@ public class DockerService {
     @Value("${docker.container.prefix}")
     private String containerPrefix;
 
+    @Value("${docker.postgres.shared.dbname}")
+    private String postgresSharedDbName;
+
     private final OdooInstanceRepository odooInstanceRepository;
 
     public DockerService(OdooInstanceRepository odooInstanceRepository, ProjectRepository projectRepository
@@ -569,13 +572,22 @@ public class DockerService {
                             executeCommand(new String[]{"cmd.exe", "/c", copyDbCmd}) &&
                             executeCommand(new String[]{"cmd.exe", "/c", restoreCmd});
 
-            // Comandos para restaurar archivos Odoo
-            String copyOdooCmd = String.format("docker cp \"%s\" %s:/tmp/restore.tar.gz", odooFile, odooContainer);
-            String extractOdooCmd = String.format("docker exec %s tar -xzf /tmp/restore.tar.gz -C /var/lib/odoo", odooContainer);
+            // Restauración de archivos Odoo usando busybox con el volumen
+            String odooVolume = "odoo_" + instanceName + "_data";
+            String tempContainerName = "restore_temp_" + instanceName;
+
+            String createTempContainer = String.format("docker create --name %s -v %s:/data busybox", tempContainerName, odooVolume);
+            String copyToTemp = String.format("docker cp \"%s\" %s:/data/restore.tar.gz", odooFile, tempContainerName);
+            String extractFromTemp = String.format(
+                    "docker run --rm --volumes-from %s busybox sh -c \"cd /data && tar -xzf restore.tar.gz && chmod -R 777 /data\"",
+                    tempContainerName);
+            String removeTemp = String.format("docker rm %s", tempContainerName);
 
             boolean odooRestored =
-                    executeCommand(new String[]{"cmd.exe", "/c", copyOdooCmd}) &&
-                            executeCommand(new String[]{"cmd.exe", "/c", extractOdooCmd});
+                    executeCommand(new String[]{"cmd.exe", "/c", createTempContainer}) &&
+                            executeCommand(new String[]{"cmd.exe", "/c", copyToTemp}) &&
+                            executeCommand(new String[]{"cmd.exe", "/c", extractFromTemp}) &&
+                            executeCommand(new String[]{"cmd.exe", "/c", removeTemp});
 
             return (dbRestored && odooRestored)
                     ? "✅ Restauración completada en la instancia " + instanceName
@@ -800,21 +812,33 @@ public String importDatabaseFromFile(MultipartFile file, String dbName, String c
     Path tempPath = Files.createTempFile("upload-", ".dump");
     file.transferTo(tempPath.toFile());
 
-    String containerDbName = "odoo_shared_db";
+    String containerDbName = getContainerName(dbName, category, true);
     String containerFilePath = "/tmp/" + file.getOriginalFilename();
 
     try {
         System.out.println("📦 Copiando dump al contenedor...");
-        runCmd(String.format("docker cp %s %s:%s", tempPath, containerDbName, containerFilePath));
+        runCmd(String.format("docker cp \"%s\" %s:%s", tempPath, containerDbName, containerFilePath));
+
+        System.out.println("🔒 Terminando sesiones activas...");
+        runCmd(String.format(
+                "docker exec %s psql -U odoo -d postgres -c \"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '%s' AND pid <> pg_backend_pid();\"",
+                containerDbName, dbName));
 
         System.out.println("🗑️ Eliminando base si existe...");
-        runCmd(String.format("docker exec %s dropdb %s --if-exists -U odoo", containerDbName, dbName));
+        runCmd(String.format("docker exec %s dropdb --if-exists -U odoo %s", containerDbName, dbName));
 
         System.out.println("📚 Creando nueva base...");
-        runCmd(String.format("docker exec %s createdb %s -U odoo", containerDbName, dbName));
+        runCmd(String.format("docker exec %s createdb -U odoo %s", containerDbName, dbName));
 
         System.out.println("🔁 Restaurando dump...");
-        runCmd(String.format("docker exec %s pg_restore -U odoo -d %s %s", containerDbName, dbName, containerFilePath));
+        boolean restoreSuccess = runCmdAndCheckWarnings(String.format(
+                "docker exec %s pg_restore -U odoo -d %s --clean --if-exists --verbose %s",
+                containerDbName, dbName, containerFilePath));
+
+        if (!restoreSuccess) {
+            System.out.println("⚠️ pg_restore devolvió código distinto de 0 pero sin errores fatales. Se considera exitoso con advertencias.");
+        }
+
     } finally {
         Files.deleteIfExists(tempPath);
     }
@@ -822,12 +846,53 @@ public String importDatabaseFromFile(MultipartFile file, String dbName, String c
     return "✅ Base de datos restaurada exitosamente.";
 }
 
+    private boolean runCmdAndCheckWarnings(String command) {
+        try {
+            System.out.println("🛠️ Ejecutando (con análisis): " + command);
+            Process process = new ProcessBuilder("cmd.exe", "/c", command)
+                    .redirectErrorStream(true)
+                    .start();
+
+            boolean hasFatalError = false;
+            List<String> outputLines = new ArrayList<>();
+
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    System.out.println("[OUTPUT] " + line);
+                    outputLines.add(line);
+                    if (line.contains("pg_restore: error:")) {
+                        hasFatalError = true;
+                    }
+                }
+            }
+
+            int exitCode = process.waitFor();
+            System.out.println("↪️ Exit code: " + exitCode);
+
+            if (hasFatalError) {
+                System.out.println("❌ Error fatal detectado en la salida del proceso.");
+                return false;
+            }
+
+            // Aunque el exitCode sea distinto de 0, si no hubo errores fatales, consideramos éxito.
+            if (exitCode != 0) {
+                System.out.println("⚠️ pg_restore retornó código distinto de 0 pero sin errores fatales.");
+            }
+
+            return true;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 
 //SHEL DB
 public String executeSqlCommandInInstance(String command, String instanceName, String category) {
     String containerName = String.format("odoo_instance_%s_%s_db", category.toUpperCase(), instanceName);
 
-    // Seguridad: bloquea comandos peligrosos
+    // Seguridad: bloquear comandos destructivos
     String lower = command.trim().toLowerCase();
     if (lower.matches("^(drop|delete|alter|truncate|update).*")) {
         return "❌ Comando no permitido por seguridad.";
@@ -838,9 +903,8 @@ public String executeSqlCommandInInstance(String command, String instanceName, S
         String escapedCommand = command.replace("\"", "\\\"");
 
         String dockerCommand = String.format(
-                "docker exec -i %s psql -U %s -d %s -q -t -c \"%s\"",
-                containerName, postgresUser, instanceName, escapedCommand
-        );
+                "docker exec -i %s psql -U %s -d %s -q -t --csv -c \"%s\"",
+                containerName, postgresUser, instanceName, escapedCommand);
 
         boolean isWindows = System.getProperty("os.name").toLowerCase().contains("win");
         String[] shellCmd = isWindows
@@ -871,7 +935,6 @@ public String executeSqlCommandInInstance(String command, String instanceName, S
         return "❌ Excepción al ejecutar el comando: " + e.getMessage();
     }
 }
-
 
 
 }

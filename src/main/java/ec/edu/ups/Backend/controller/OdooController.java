@@ -83,6 +83,7 @@ public class OdooController {
                     request.getSource(),
                     request.getTarget()
             );
+            System.out.println(" Resultado del merge: " + result);
 
             return result.startsWith("✅")
                     ? ResponseEntity.ok(result)

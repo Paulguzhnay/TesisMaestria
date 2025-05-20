@@ -38,7 +38,7 @@ public class SecurityConfig {
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/**").permitAll()
-                        .requestMatchers("/api/odoo/**", "/api/import-db", "/api/projects/**").authenticated()
+                        .requestMatchers("/api/odoo/**", "/api/import-db","/docker/**", "/api/projects/**").authenticated()
                         .anyRequest().permitAll())
                 .exceptionHandling(e -> e
                         .authenticationEntryPoint((req, res, ex) -> res.sendError(HttpServletResponse.SC_UNAUTHORIZED)))

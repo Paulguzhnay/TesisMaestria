@@ -139,12 +139,15 @@ public class DockerController {
             @RequestParam("name") String name,
             @RequestParam("category") String category) {
         try {
+            System.out.println("🛠️ Recibido archivo: " + file.getOriginalFilename());
+            System.out.println("Instancia destino: " + name + " | Categoría: " + category);
+
             String result = dockerService.importDatabaseFromFile(file, name, category);
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(" Error al importar base de datos: " + e.getMessage());
+                    .body("❌ Error al importar base de datos: " + e.getMessage());
         }
     }
 
