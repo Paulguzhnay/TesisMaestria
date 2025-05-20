@@ -15,7 +15,7 @@
     Shell
   </a>
 </li>
-  <li><a [routerLink]="['/projects', projectName, 'backups']">Backups</a></li>
+  <li><a [routerLink]="['/projects', projectName, 'backups']" [queryParams]="{ id: projectId }" >Backups</a></li>
 <li>
   <a [routerLink]="['/projects', projectName, 'import']" [queryParams]="{ id: projectId }">
     Importar Base de Datos

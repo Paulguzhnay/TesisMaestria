@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit} from '@angular/core';
 import { ShellService } from '../../services/shell.service';
 import { Router, ActivatedRoute } from '@angular/router';
  
@@ -9,54 +9,84 @@ import { Router, ActivatedRoute } from '@angular/router';
   templateUrl: './shell-db.component.html',
   styleUrl: './shell-db.component.css'
 })
-export class ShellDbComponent {
+export class ShellDbComponent implements OnInit {
   command: string = '';
   result: string = '';
   isLoading: boolean = false;
+
   projectName: string = '';
-  instanceName: string = '';
-  category: string = ''; // 🔧 propiedad que antes causaba el error
+  instances: any[] = [];
+  selectedInstance: any = null;
+  csvRows: string[][] = [];
 
   constructor(
     private shellService: ShellService,
     private route: ActivatedRoute
-  ) {
-    // Ruta: /projects/:name/shell-db?instance=test-01&category=DEVELOPMENT
-    const nameFromUrl = this.route.snapshot.paramMap.get('name');
-    if (nameFromUrl) {
-      this.projectName = decodeURIComponent(nameFromUrl);
-    }
+  ) {}
 
-    const queryParams = this.route.snapshot.queryParamMap;
-    this.instanceName = queryParams.get('instance') || '';
-    this.category = queryParams.get('category') || '';
-  }
-
-  executeCommand(): void {
-    if (!this.command.trim()) {
-      this.result = '❗ El comando no puede estar vacío';
-      return;
-    }
-
-    this.isLoading = true;
-    this.result = '⏳ Ejecutando...';
-
-    const payload = {
-      command: this.command,
-      name: this.instanceName,
-      category: this.category
-    };
-
-    this.shellService.executeDbCommand(payload).subscribe({
-      next: (output: string) => {
-        this.result = output;
-        this.isLoading = false;
-      },
-      error: (err) => {
-        this.result = '❌ Error ejecutando comando: ' + (err?.error || 'Error desconocido');
-        this.isLoading = false;
+  ngOnInit(): void {
+    this.route.paramMap.subscribe(params => {
+      const nameFromUrl = params.get('name');
+      if (nameFromUrl) {
+        this.projectName = decodeURIComponent(nameFromUrl);
+        this.loadInstances();
       }
     });
   }
+
+  loadInstances(): void {
+    this.shellService.getInstancesByProject(this.projectName).subscribe({
+      next: (data) => {
+        this.instances = data;
+        console.log('📦 Instancias cargadas:', data);
+      },
+      error: () => {
+        this.result = '❌ Error al cargar instancias del proyecto.';
+      }
+    });
+  }
+
+executeCommand(): void {
+  if (!this.command.trim()) {
+    this.result = '❗ El comando no puede estar vacío';
+    return;
+  }
+
+  if (!this.selectedInstance) {
+    this.result = '❗ Debes seleccionar una instancia.';
+    return;
+  }
+
+  this.isLoading = true;
+  this.result = '⏳ Ejecutando...';
+  this.csvRows = [];
+
+  const payload = {
+    command: this.command,
+    name: this.selectedInstance.name,
+    category: this.selectedInstance.category
+  };
+
+  console.log('➡ Enviando comando con:', payload);
+
+  this.shellService.executeDbCommand(payload).subscribe({
+    next: (output: string) => {
+      this.result = output;
+      this.isLoading = false;
+
+      // Parsear CSV simple por filas y columnas
+      this.csvRows = output
+        .trim()
+        .split('\n')
+        .map(row => row.split(',').map(cell => cell.replace(/^"|"$/g, '').trim()));
+    },
+    error: (err) => {
+      this.result = '❌ Error ejecutando comando: ' + (err?.error || 'Error desconocido');
+      this.isLoading = false;
+      this.csvRows = [];
+    }
+  });
+}
+
 }
 

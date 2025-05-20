@@ -28,3 +28,17 @@ button {
   display: block;
   margin: 0 auto;
 }
+.success-snackbar {
+  background-color: #4caf50;
+  color: white;
+}
+
+.warning-snackbar {
+  background-color: #ff9800;
+  color: white;
+}
+
+.error-snackbar {
+  background-color: #f44336;
+  color: white;
+}

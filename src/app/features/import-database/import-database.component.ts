@@ -2,7 +2,7 @@ import { Component, OnInit} from '@angular/core';
 import { OdooService } from '../../services/odoo.service';
 import { HttpClient, HttpEventType } from '@angular/common/http';
 import { ActivatedRoute } from '@angular/router';
-
+import { MatSnackBar } from '@angular/material/snack-bar';
 @Component({
   selector: 'app-import-database',
   standalone: false,
@@ -19,7 +19,8 @@ export class ImportDatabaseComponent implements OnInit {
   constructor(
     private odooService: OdooService,
     private http: HttpClient,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private snackBar: MatSnackBar
   ) {}
 
     ngOnInit(): void {
@@ -58,24 +59,48 @@ export class ImportDatabaseComponent implements OnInit {
     this.selectedFile = event.target.files[0] || null;
   }
 
-  importDatabase(): void {
-    if (!this.selectedFile || !this.selectedInstance) return;
+    importDatabase(): void {
+      if (!this.selectedFile || !this.selectedInstance) return;
 
-    const formData = new FormData();
-    formData.append('file', this.selectedFile);
-    formData.append('name', this.selectedInstance.name);
-    formData.append('category', this.selectedInstance.category);
+      const formData = new FormData();
+      formData.append('file', this.selectedFile);
+      formData.append('name', this.selectedInstance.name);
+      formData.append('category', this.selectedInstance.category);
 
-    this.http.post('http://localhost:8080/api/import-db', formData, {
-      reportProgress: true,
-      observe: 'events'
-    }).subscribe({
-      next: (event) => {
-        if (event.type === HttpEventType.Response) {
-          alert(' Base de datos importada correctamente.');
+      this.http.post('http://localhost:8080/docker/import-db', formData, {
+        reportProgress: true,
+        observe: 'events',
+        responseType: 'text'
+      }).subscribe({
+        next: (event) => {
+          if (event.type === HttpEventType.Response) {
+            const responseText = event.body || '';
+
+            if (responseText.includes('✅')) {
+              this.snackBar.open('✅ Base de datos importada exitosamente.', 'Cerrar', {
+                duration: 6000,
+                panelClass: ['success-snackbar']
+              });
+            } else if (responseText.includes('⚠️') || responseText.toLowerCase().includes('advertencia')) {
+              this.snackBar.open('⚠️ Restauración completada con advertencias.', 'Cerrar', {
+                duration: 6000,
+                panelClass: ['warning-snackbar']
+              });
+            } else {
+              this.snackBar.open('ℹ️ Resultado: ' + responseText, 'Cerrar', {
+                duration: 6000
+              });
+            }
+          }
+        },
+        error: (err) => {
+          console.error('❌ Error al importar base de datos:', err);
+          this.snackBar.open('❌ Error al importar la base de datos.', 'Cerrar', {
+            duration: 6000,
+            panelClass: ['error-snackbar']
+          });
         }
-      },
-      error: () => alert('Error al importar la base de datos.')
-    });
-  }
+      });
+    }
+
 }

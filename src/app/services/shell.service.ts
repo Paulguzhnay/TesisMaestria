@@ -13,4 +13,7 @@ export class ShellService {
       responseType: 'text'
     });
   }
+  getInstancesByProject(projectName: string): Observable<any[]> {
+  return this.http.get<any[]>(`http://localhost:8080/api/odoo/instances/by-project/${projectName}`);
+}
 }

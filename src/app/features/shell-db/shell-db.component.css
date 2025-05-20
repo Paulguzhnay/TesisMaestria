@@ -23,4 +23,16 @@ pre {
 .error-output {
   color: #ff6b6b;
 }
+.result-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.result-table td {
+  border: 1px solid #ccc;
+  padding: 4px 8px;
+  font-size: 13px;
+  white-space: pre-wrap;
+}
 

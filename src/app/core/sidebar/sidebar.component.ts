@@ -56,7 +56,6 @@ constructor(
   });
 }
 
-
       ngOnInit(): void {
         console.log("✅ ngOnInit de SidebarComponent se ha ejecutado");
         this.route.paramMap.subscribe(params => {
@@ -81,10 +80,6 @@ constructor(
           }
         });
       }
-
-
-
- 
 
       loadInstancesByProject(projectName: string): void {
         console.log("Cargando instancias para el proyecto:", projectName);
@@ -190,8 +185,16 @@ constructor(
   
     const confirmacion = confirm(`¿Seguro que quieres hacer merge de ${this.selectedSource.name} ➡️ ${this.selectedTarget.name}?`);
     if (!confirmacion) return;
+    console.log(" Enviando payload de merge:", {
+                  source: this.selectedSource.name,
+                  target: this.selectedTarget.name,
+                  projectId: this.projectId
+                });
   
-    this.odooService.mergeInstances(this.selectedSource.name, this.selectedTarget.name, this.selectedTarget.category).subscribe({
+    this.odooService.mergeInstances(
+      this.selectedSource.name, 
+      this.selectedTarget.name, 
+      this.projectId).subscribe({
       next: (response) => {
         console.log('Respuesta del merge:', response);
   
@@ -213,7 +216,4 @@ constructor(
       }
     });
   }
-
- 
-  
 }

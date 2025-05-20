@@ -26,8 +26,12 @@ deleteInstance(name: string, category: string): Observable<string> {
 }
 
 //------------------
-mergeInstances(sourceName: string, targetName: string, category: string): Observable<string> {
-  const payload = { source: sourceName, target: targetName, category };
+mergeInstances(sourceName: string, targetName: string, projectId: number): Observable<string> {
+  const payload = {
+    projectId,
+    source: sourceName,
+    target: targetName
+  };
   return this.http.post<string>(`${this.apiUrl}/merge`, payload, { responseType: 'text' as 'json' });
 }
 //---------------------
