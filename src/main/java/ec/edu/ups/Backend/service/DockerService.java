@@ -23,6 +23,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 
@@ -330,56 +332,12 @@ public class DockerService {
         return exitCode == 0;
     }
 
-
-
-    /// //////////////////
-    public List<BackupInfo> getBackupsForUser(String username) {
-        List<OdooInstance> instances = odooInstanceRepository.findByProjectUserUsername(username);
-
-        File directory = new File(backupDir);
-        if (!directory.exists()) {
-            boolean created = directory.mkdirs();
-            if (!created) {
-                System.err.println("No se pudo crear la carpeta de backups: " + backupDir);
-                return List.of();
-            }
-        }
-
-        File[] files = directory.listFiles();
-        if (files == null || files.length == 0) {
-            return List.of();
-        }
-
-        List<BackupInfo> backups = new ArrayList<>();
-        for (File file : files) {
-            for (OdooInstance instance : instances) {
-                String instanceName = instance.getName();
-                String category = instance.getCategory();
-
-                if (file.getName().contains(instanceName) && file.getName().contains(category)) {
-                    long timestamp = file.getName().matches(".*\\d+.*")
-                            ? Long.parseLong(file.getName().replaceAll("\\D", ""))
-                            : file.lastModified();
-
-                    backups.add(new BackupInfo(
-                            file.getName(),
-                            Instant.ofEpochMilli(timestamp),
-                            category,
-                            "15.0",
-                            file.getName().contains("Auto") ? "Automático" : "Manual",
-                            "N/A"
-                    ));
-                }
-            }
-        }
-
-        return backups;
-    }
-
     /// /////////////////////
 
     public String createBackup(String username, Long projectId, String instanceName, String category) {
-        // 🔐 Validar que el proyecto pertenece al usuario autenticado
+        System.out.println("iniciando");
+
+        // ✅ Obtener el proyecto y validar que pertenece al usuario autenticado
         Project project = projectRepository.findById(projectId)
                 .filter(p -> p.getUser().getUsername().equals(username))
                 .orElse(null);
@@ -388,9 +346,12 @@ public class DockerService {
             return "❌ Proyecto no válido para el usuario autenticado.";
         }
 
+        String projectName = project.getName().replaceAll("\\s+", "-"); // nombre sin espacios
+
+        System.out.println("proyecto: " + projectName);
+
         // 🔎 Buscar instancia dentro del proyecto
         List<OdooInstance> matches = odooInstanceRepository.findAllByNameAndProjectId(instanceName, projectId);
-
         if (matches.isEmpty()) {
             return "❌ Instancia no encontrada en el proyecto especificado.";
         } else if (matches.size() > 1) {
@@ -401,23 +362,36 @@ public class DockerService {
 
         String dbContainerName = getContainerName(instanceName, category, true);
         String odooContainerName = getContainerName(instanceName, category, false);
+        System.out.println("dbContainerName: " + dbContainerName);
+        System.out.println("odooContainerName: " + odooContainerName);
 
         if (dbContainerName == null || odooContainerName == null) {
-            return "Error: No se encontraron los contenedores para la instancia.";
+            return "❌ No se encontraron los contenedores para la instancia.";
         }
 
         File backupDirFile = new File(backupDir);
         if (!backupDirFile.exists() && !backupDirFile.mkdirs()) {
-            return "Error: No se pudo crear la carpeta de backups.";
+            return "❌ No se pudo crear la carpeta de backups.";
         }
 
         String timestamp = String.valueOf(System.currentTimeMillis());
-        String dbBackupFilePath = backupDir + File.separator + String.format("db_backup_%s_%s_%s.dump", category.toUpperCase(), instanceName, timestamp);
-        String odooBackupFilePath = backupDir + File.separator + String.format("odoo_data_%s_%s_%s.tar.gz", category.toUpperCase(), instanceName, timestamp);
+
+        // ✅ Incluir nombre del proyecto en los archivos
+        String dbFileName = String.format("db_backup_%s_%s_%s_%s.dump",
+                projectName, category.toUpperCase(), instanceName, timestamp);
+
+        String odooFileName = String.format("odoo_data_%s_%s_%s_%s.tar.gz",
+                projectName, category.toUpperCase(), instanceName, timestamp);
+
+        String dbBackupFilePath = backupDir + File.separator + dbFileName;
+        String odooBackupFilePath = backupDir + File.separator + odooFileName;
+
+        System.out.println("dbBackupFilePath: " + dbBackupFilePath);
+        System.out.println("odooBackupFilePath: " + odooBackupFilePath);
 
         try {
-            // 🔄 Backup base de datos
-            String dbBackupPathInContainer = String.format("/tmp/db_backup_%s_%s_%s.dump", category.toUpperCase(), instanceName, timestamp);
+            // 📦 Comando para backup de base de datos
+            String dbBackupPathInContainer = "/tmp/" + dbFileName;
             String dbDumpCommand = String.format(
                     "docker exec %s pg_dump -U %s -d %s -Fc -f %s",
                     dbContainerName, postgresUser, instanceName, dbBackupPathInContainer
@@ -427,20 +401,33 @@ public class DockerService {
                     dbContainerName, dbBackupPathInContainer, dbBackupFilePath
             );
 
-            // 🗃️ Backup del filestore de Odoo
-            String odooBackupPathInContainer = String.format("/tmp/odoo_data_%s_%s_%s.tar.gz", category.toUpperCase(), instanceName, timestamp);
-            String odooBackupCommand = "docker exec " + odooContainerName +
-                    " tar -czf " + odooBackupPathInContainer + " -C /var/lib/odoo .";
-            String dockerCopyCommand = "docker cp " + odooContainerName + ":" + odooBackupPathInContainer +
-                    " \"" + odooBackupFilePath + "\"";
+            // 📁 Comando para backup del filestore
+            String odooBackupPathInContainer = "/tmp/" + odooFileName;
+            String odooBackupCommand = String.format(
+                    "docker exec %s tar -czf %s -C /var/lib/odoo .",
+                    odooContainerName, odooBackupPathInContainer
+            );
+            String dockerCopyCommand = String.format(
+                    "docker cp %s:%s \"%s\"",
+                    odooContainerName, odooBackupPathInContainer, odooBackupFilePath
+            );
+
+            System.out.println("dbDumpCommand: " + dbDumpCommand);
+            System.out.println("dbCopyCommand: " + dbCopyCommand);
+            System.out.println("odooBackupCommand: " + odooBackupCommand);
+            System.out.println("dockerCopyCommand: " + dockerCopyCommand);
 
             boolean dbSuccess = executeCommand(new String[]{"cmd.exe", "/c", dbDumpCommand}) &&
                     executeCommand(new String[]{"cmd.exe", "/c", dbCopyCommand});
+
             boolean odooSuccess = executeCommand(new String[]{"cmd.exe", "/c", odooBackupCommand}) &&
                     executeCommand(new String[]{"cmd.exe", "/c", dockerCopyCommand});
 
+            System.out.println("dbSuccess: " + dbSuccess);
+            System.out.println("odooSuccess: " + odooSuccess);
+
             if (!dbSuccess || !odooSuccess) {
-                return "Error: No se pudo realizar el backup.";
+                return "❌ Error: No se pudo realizar el backup.";
             }
 
             return "✅ Backup creado exitosamente para la instancia: " + instanceName;
@@ -451,15 +438,22 @@ public class DockerService {
         }
     }
 
-
-
-
     /// //////////////////////
-    public List<BackupInfo> getBackups(User user) {
-        File directory = new File(backupDir);
+    public List<BackupInfo> getBackupsForInstance(String username, String instanceName, String category) {
+        List<OdooInstance> instances = odooInstanceRepository.findByProjectUserUsername(username);
 
+        // Validar que la instancia pertenezca al usuario
+        boolean valid = instances.stream().anyMatch(i ->
+                i.getName().equals(instanceName) && i.getCategory().equalsIgnoreCase(category));
+
+        if (!valid) {
+            System.err.println("❌ Instancia no válida para el usuario");
+            return List.of();
+        }
+
+        File directory = new File(backupDir);
         if (!directory.exists() && !directory.mkdirs()) {
-            System.err.println("No se pudo crear la carpeta de backups: " + backupDir);
+            System.err.println("❌ No se pudo crear la carpeta de backups: " + backupDir);
             return List.of();
         }
 
@@ -468,31 +462,26 @@ public class DockerService {
             return List.of();
         }
 
-        return Arrays.stream(files)
-                .filter(File::isFile)
-                .filter(file -> {
-                    // Filtrar archivos por instancia que pertenezca a un proyecto del usuario
-                    List<OdooInstance> userInstances = odooInstanceRepository.findByProjectUserUsername(user.getUsername());
+        List<BackupInfo> backups = new ArrayList<>();
+        for (File file : files) {
+            if (file.getName().contains(instanceName) && file.getName().contains(category)) {
+                long timestamp = file.getName().matches(".*\\d{13}.*")
+                        ? Long.parseLong(file.getName().replaceAll("\\D", ""))
+                        : file.lastModified();
 
-                    return userInstances.stream().anyMatch(instance -> file.getName().contains(instance.getName()));
-                })
-                .map(file -> {
-                    String name = file.getName();
-                    long timestamp = name.matches(".*\\d+.*") ?
-                            Long.parseLong(name.replaceAll("\\D", "")) :
-                            file.lastModified();
-                    return new BackupInfo(
-                            name,
-                            Instant.ofEpochMilli(timestamp),
-                            "Desconocido",
-                            "15.0",
-                            name.contains("Auto") ? "Automático" : "Manual",
-                            "N/A"
-                    );
-                })
-                .collect(Collectors.toList());
+                backups.add(new BackupInfo(
+                        file.getName(),
+                        Instant.ofEpochMilli(timestamp),
+                        category,
+                        "15.0",
+                        file.getName().contains("Auto") ? "Automático" : "Manual",
+                        "N/A"
+                ));
+            }
+        }
+
+        return backups;
     }
-
 
 
 
@@ -526,16 +515,35 @@ public class DockerService {
 
 
     //-----------------v1
-
-    public String restoreBackup(String username, Long projectId, String instanceName, String category, String dbBackupFileName, String odooBackupFileName) {
+    public String restoreBackup(String username, Long projectId, String instanceName, String category,
+                                String dbBackupFileName, String odooBackupFileName) {
         // Validar que el proyecto pertenece al usuario
         Optional<Project> projectOpt = projectRepository.findById(projectId);
         if (projectOpt.isEmpty() || !projectOpt.get().getUser().getUsername().equals(username)) {
             return "❌ No tienes permiso para restaurar en este proyecto.";
         }
 
-        List<OdooInstance> instances = odooInstanceRepository.findAllByNameAndProjectId(instanceName, projectId);
+        Project project = projectOpt.get();
 
+        // Regex para extraer project, category, instance de nombres tipo: db_backup_<project>_<category>_<instance>_<timestamp>.dump
+        Pattern pattern = Pattern.compile("^db_backup_(.+?)_([A-Z]+)_(.+?)_\\d+\\.dump$");
+        Matcher matcher = pattern.matcher(dbBackupFileName);
+
+        if (!matcher.matches()) {
+            return "❌ Nombre de archivo de backup inválido.";
+        }
+
+        String projectFromFile = matcher.group(1);
+        String categoryFromFile = matcher.group(2);
+        String instanceFromFile = matcher.group(3);
+
+        if (!instanceFromFile.equals(instanceName) ||
+                !categoryFromFile.equalsIgnoreCase(category) ||
+                !projectFromFile.equals(project.getName())) {
+            return "❌ El archivo de backup no coincide con la instancia, categoría o proyecto.";
+        }
+
+        List<OdooInstance> instances = odooInstanceRepository.findAllByNameAndProjectId(instanceName, projectId);
         if (instances.isEmpty()) {
             return "❌ Instancia no encontrada en el proyecto especificado.";
         } else if (instances.size() > 1) {
@@ -572,7 +580,7 @@ public class DockerService {
                             executeCommand(new String[]{"cmd.exe", "/c", copyDbCmd}) &&
                             executeCommand(new String[]{"cmd.exe", "/c", restoreCmd});
 
-            // Restauración de archivos Odoo usando busybox con el volumen
+            // Restauración de archivos Odoo usando busybox
             String odooVolume = "odoo_" + instanceName + "_data";
             String tempContainerName = "restore_temp_" + instanceName;
 
@@ -598,6 +606,7 @@ public class DockerService {
             return "❌ Error durante el restore: " + e.getMessage();
         }
     }
+
 
 
 
@@ -934,6 +943,66 @@ public String executeSqlCommandInInstance(String command, String instanceName, S
     } catch (Exception e) {
         return "❌ Excepción al ejecutar el comando: " + e.getMessage();
     }
+}
+
+//IMPORT DATABASE AND ODOO
+public String importDatabaseAndOdooFiles(MultipartFile dbFile, MultipartFile odooFile, String dbName, String category) throws IOException {
+    // Guardar archivo temporal de la base de datos
+    Path dbTempPath = Files.createTempFile("upload-db-", ".dump");
+    dbFile.transferTo(dbTempPath.toFile());
+
+    String containerDbName = getContainerName(dbName, category, true);
+    String containerDbFilePath = "/tmp/restore.dump";
+
+    try {
+        System.out.println("📦 Copiando dump al contenedor...");
+        runCmd(String.format("docker cp \"%s\" %s:%s", dbTempPath, containerDbName, containerDbFilePath));
+
+        System.out.println("🔒 Terminando sesiones activas...");
+        runCmd(String.format(
+                "docker exec %s psql -U odoo -d postgres -c \"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '%s' AND pid <> pg_backend_pid();\"",
+                containerDbName, dbName));
+
+        System.out.println("🗑️ Eliminando base si existe...");
+        runCmd(String.format("docker exec %s dropdb --if-exists -U odoo %s", containerDbName, dbName));
+
+        System.out.println("📚 Creando nueva base...");
+        runCmd(String.format("docker exec %s createdb -U odoo %s", containerDbName, dbName));
+
+        System.out.println("🔁 Restaurando dump...");
+        boolean restoreSuccess = runCmdAndCheckWarnings(String.format(
+                "docker exec %s pg_restore -U odoo -d %s --clean --if-exists --verbose %s",
+                containerDbName, dbName, containerDbFilePath));
+
+        if (!restoreSuccess) {
+            System.out.println("⚠️ pg_restore devolvió código distinto de 0 pero sin errores fatales.");
+        }
+
+        // Si se recibió archivo de Odoo (.tar.gz), restaurar también
+        if (odooFile != null && !odooFile.isEmpty()) {
+            System.out.println("📁 Restaurando filestore de Odoo...");
+
+            Path odooTempPath = Files.createTempFile("upload-odoo-", ".tar.gz");
+            odooFile.transferTo(odooTempPath.toFile());
+
+            String odooVolume = "odoo_" + dbName + "_data";
+            String tempContainer = "restore_temp_" + dbName;
+
+            runCmd(String.format("docker create --name %s -v %s:/data busybox", tempContainer, odooVolume));
+            runCmd(String.format("docker cp \"%s\" %s:/data/restore.tar.gz", odooTempPath, tempContainer));
+            runCmd(String.format(
+                    "docker run --rm --volumes-from %s busybox sh -c \"cd /data && tar -xzf restore.tar.gz && chmod -R 777 /data\"",
+                    tempContainer));
+            runCmd(String.format("docker rm %s", tempContainer));
+
+            Files.deleteIfExists(odooTempPath);
+        }
+
+    } finally {
+        Files.deleteIfExists(dbTempPath);
+    }
+
+    return "✅ Base de datos restaurada exitosamente.";
 }
 
 

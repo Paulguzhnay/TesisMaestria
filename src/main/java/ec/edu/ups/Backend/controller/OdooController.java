@@ -1,5 +1,6 @@
 package ec.edu.ups.Backend.controller;
 
+import ec.edu.ups.Backend.dto.OdooInstanceDTO;
 import ec.edu.ups.Backend.model.MergeRequest;
 import ec.edu.ups.Backend.model.OdooInstance;
 import ec.edu.ups.Backend.repository.OdooInstanceRepository;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/odoo")
@@ -95,10 +97,13 @@ public class OdooController {
     }
 
     @GetMapping("/instances/by-project/{projectName}")
-    public ResponseEntity<List<OdooInstance>> getInstancesByProject(@PathVariable String projectName) {
+    public ResponseEntity<List<OdooInstanceDTO>> getInstancesByProject(@PathVariable String projectName) {
         try {
             List<OdooInstance> instances = dockerService.getInstancesByProject(projectName);
-            return ResponseEntity.ok(instances);
+            List<OdooInstanceDTO> dtos = instances.stream()
+                    .map(OdooInstanceDTO::new)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(dtos);
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(500).build();

@@ -1,6 +1,7 @@
 
 package ec.edu.ups.Backend.controller;
 
+import ec.edu.ups.Backend.dto.BackupRequest;
 import ec.edu.ups.Backend.model.BackupInfo;
 import ec.edu.ups.Backend.model.User;
 import ec.edu.ups.Backend.repository.UserRepository;
@@ -22,6 +23,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -44,43 +46,43 @@ public class DockerController {
         this.dockerService = dockerService;
     }
 
-    @GetMapping("/backups")
-    public ResponseEntity<List<BackupInfo>> getBackups(Authentication authentication) {
-        String username = authentication.getName();
-        Optional<User> userOpt = userRepo.findByUsername(username);
-
-        if (userOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    @GetMapping("/backups/instance")
+    public ResponseEntity<List<BackupInfo>> getBackupsForInstance(
+            @RequestParam String instanceName,
+            @RequestParam String category,
+            Authentication authentication
+    ) {
+        try {
+            String username = authentication.getName();
+            List<BackupInfo> backups = dockerService.getBackupsForInstance(username, instanceName, category);
+            System.out.println("backups "+backups);
+            return ResponseEntity.ok(backups);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
-
-        List<BackupInfo> backups = dockerService.getBackupsForUser(username);
-        return ResponseEntity.ok(backups);
     }
+
 
 
     @PostMapping("/backup")
-    public ResponseEntity<String> backupInstance(@RequestBody Map<String, String> request, Authentication authentication) {
+    public ResponseEntity<Map<String, String>> backupInstance(@RequestBody BackupRequest request, Authentication authentication) {
+        Map<String, String> responseMap = new HashMap<>();
         try {
-            Long projectId = Long.parseLong(request.get("projectId"));
-            String instanceName = request.get("name");
-            String category = request.get("category");
-
-            // 🔐 Extraer el nombre de usuario autenticado
             String username = authentication.getName();
+            String result = dockerService.createBackup(username, request.getProjectId(), request.getName(), request.getCategory());
 
-            // ✅ Llamar al método actualizado del servicio
-            String response = dockerService.createBackup(username, projectId, instanceName, category);
-
-            return response.startsWith("✅")
-                    ? ResponseEntity.ok(response)
-                    : ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+            responseMap.put("message", result);
+            return result.startsWith("✅")
+                    ? ResponseEntity.ok(responseMap)
+                    : ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(responseMap);
 
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("❌ Parámetros inválidos o incompletos.");
+            responseMap.put("message", "❌ Error inesperado: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(responseMap);
         }
     }
-
 
     @PostMapping("/restore-specific")
     public ResponseEntity<String> restoreSpecific(@RequestBody Map<String, String> payload, Authentication authentication) {
@@ -91,7 +93,13 @@ public class DockerController {
             String dbFile = payload.get("dbBackupFileName");
             String odooFile = payload.get("odooBackupFileName");
 
-            String username = authentication.getName(); // 👤 Extraer nombre del usuario autenticado
+            System.out.println("projectId "+projectId);
+            System.out.println(" instance "+instance);
+            System.out.println("category "+category);
+            System.out.println("dbFile "+dbFile);
+            System.out.println(" odooFile "+odooFile);
+
+            String username = authentication.getName(); //  Extraer nombre del usuario autenticado
 
             String result = dockerService.restoreBackup(username, projectId, instance, category, dbFile, odooFile);
 
@@ -148,6 +156,24 @@ public class DockerController {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("❌ Error al importar base de datos: " + e.getMessage());
+        }
+    }
+
+    //-------------------------------
+    @PostMapping("/import-db-advanced")
+    public ResponseEntity<String> importDbAndOdoo(
+            @RequestParam("dbFile") MultipartFile dbFile,
+            @RequestParam(value = "odooFile", required = false) MultipartFile odooFile,
+            @RequestParam("name") String name,
+            @RequestParam("category") String category) {
+
+        try {
+            String result = dockerService.importDatabaseAndOdooFiles(dbFile, odooFile, name, category);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("❌ Error durante importación: " + e.getMessage());
         }
     }
 
