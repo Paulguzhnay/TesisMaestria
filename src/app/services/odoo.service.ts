@@ -39,5 +39,9 @@ getByProject(projectName: string): Observable<OdooInstance[]> {
   const url = `http://localhost:8080/api/odoo/instances/by-project/${projectName}`;
   return this.http.get<OdooInstance[]>(url);
 }
+//-----------------
+getInstancesByProject(projectName: string): Observable<OdooInstance[]> {
+  return this.http.get<OdooInstance[]>(`http://localhost:8080/api/odoo/instances/by-project/${projectName}`);
+}
 }
 

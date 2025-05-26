@@ -27,19 +27,33 @@ export class ShellComponent implements OnInit, OnDestroy {
     private route: ActivatedRoute
   ) {}
 
-  ngOnInit(): void {
-    this.initTerminal();
+    ngOnInit(): void {
+      this.initTerminal();
 
-    const currentUrl = window.location.pathname;
-    if (currentUrl.includes('/projects/')) {
-      const parts = currentUrl.split('/projects/')[1].split('/');
-      this.projectName = decodeURIComponent(parts[0]);
+      //  Obtener desde la ruta padre
+      const parentRoute = this.route.parent;
+      if (!parentRoute) {
+        this.terminal.writeln('❌ No se pudo acceder a la ruta padre.');
+        return;
+      }
 
-      this.loadInstances();
-    } else {
-      this.terminal.writeln(' No se detectó un proyecto activo.');
+      parentRoute.paramMap.subscribe(params => {
+        const instanceName = params.get('instanceName') || '';
+        const projectName = params.get('projectName') || '';
+        const category = parentRoute.snapshot.queryParamMap.get('category') || '';
+
+        this.projectName = projectName;
+        this.selectedContainer = `odoo_instance_${category}_${instanceName}_db`;
+
+        this.terminal.writeln(`📦 Cargando logs de: ${this.selectedContainer}`);
+        console.log("✅ instanceName:", instanceName);
+        console.log("✅ category:", category);
+        console.log("✅ selectedContainer:", this.selectedContainer);
+
+        this.verLogs(this.selectedContainer);
+      });
     }
-  }
+
 
   ngOnDestroy(): void {
     if (this.intervalId) {

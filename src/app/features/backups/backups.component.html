@@ -1,75 +1,67 @@
 <div class="container">
 
-  <!-- Notificación -->
-  <div class="notification" *ngIf="notificationMessage" [ngClass]="{ 'success': notificationType === 'success', 'error': notificationType === 'error' }">
+  <!-- ✅ Notificación -->
+  <div *ngIf="notificationMessage" class="notification" [ngClass]="notificationType">
     {{ notificationMessage }}
   </div>
 
-  <!-- Spinner de restauración -->
-  <div *ngIf="isRestoring" class="progress-container">
-    <div class="restoring-indicator">
-      <p>{{ currentStep || '🔄 Restaurando backup... por favor espera.' }}</p>
-      <mat-progress-bar mode="indeterminate" color="primary"></mat-progress-bar>
-    </div>
-  </div>
-
-  <!-- 🛠️ Instancias Disponibles -->
-  <h2 class="section-title">Instancias Disponibles</h2>
+  <!-- 🛠️ Instancia Seleccionada -->
+  <h2 class="section-title">Instancia Seleccionada</h2>
   <mat-divider></mat-divider>
 
-  <div *ngIf="instances.length === 0" class="empty-message">
-    🚫 No hay instancias disponibles en este proyecto.
+  <div *ngIf="instances.length === 0">
+    <p class="empty-message">🚫 No hay instancias disponibles.</p>
   </div>
 
-  <div class="instances-container">
-    <mat-card *ngFor="let instance of instances" class="instance-card">
+  <div *ngIf="filteredInstance">
+    <mat-card class="instance-card">
       <mat-card-header>
-        <mat-card-title>{{ instance.name }}</mat-card-title>
-        <mat-card-subtitle>{{ instance.category }}</mat-card-subtitle>
+        <mat-card-title>{{ filteredInstance.name }}</mat-card-title>
+        <mat-card-subtitle>{{ filteredInstance.category }}</mat-card-subtitle>
       </mat-card-header>
 
       <mat-card-actions>
-        <button mat-raised-button color="primary" (click)="createBackupForInstance(instance)" aria-label="Crear Backup">
+        <button mat-raised-button color="primary"
+                (click)="createBackupForInstance(filteredInstance)"
+                aria-label="Crear Backup">
           📦 Crear Backup
-        </button>
-        <button mat-raised-button color="warn" (click)="deleteInstance(instance)" aria-label="Eliminar Instancia">
-          🗑️ Eliminar Instancia
         </button>
       </mat-card-actions>
     </mat-card>
   </div>
 
-  <!-- 📦 Backups Existentes -->
-  <h2 class="section-title">Backups Existentes</h2>
-  <mat-divider></mat-divider>
-
-  <div *ngIf="groupedBackups.length === 0" class="empty-message" style="margin-top: 30px;">
-    📂 No se encontraron backups aún.
+  <div *ngIf="instances.length > 0 && !filteredInstance">
+    <p class="empty-message">❌ No se detectó la instancia solicitada.</p>
   </div>
 
-  <!-- Agrupación por timestamp -->
-  <div class="table-container" *ngFor="let group of groupedBackups">
+  <!-- 📂 Backups Existentes -->
+  <h2 class="section-title" style="margin-top: 40px;">Backups Existentes</h2>
+  <mat-divider></mat-divider>
+
+  <div *ngIf="groupedBackups.length === 0" class="empty-message" style="margin-top: 20px;">
+    📁 No se encontraron backups para esta instancia.
+  </div>
+
+  <div *ngFor="let group of groupedBackups" class="table-container" style="margin-top: 20px;">
     <h3 class="group-header">
       🕒 Backup del: {{ formatTimestamp(group.timestamp) }}
-      <ng-container *ngIf="group.category && group.name">
-        — [{{ group.category }}] {{ group.name }}
-      </ng-container>
+      — [{{ group.category }}] {{ group.name }}
     </h3>
 
     <table mat-table [dataSource]="group.backups" class="mat-elevation-z8" [ngClass]="group.colorClass">
 
-      <!-- Archivo -->
+      <!-- Nombre del archivo -->
       <ng-container matColumnDef="name">
         <th mat-header-cell *matHeaderCellDef>Archivo</th>
         <td mat-cell *matCellDef="let backup">
-          {{ backup.name.includes('db_backup') ? '📆 Base de Datos' : '📁 Odoo Archivos' }}<br>
+          {{ backup.name.includes('db_backup') ? '📆 Base de Datos' : '📁 Archivos Odoo' }}<br>
           <small>{{ backup.name }}</small>
         </td>
       </ng-container>
 
-      <!-- Tiempo -->
+      <!-- Fecha y hora -->
       <ng-container matColumnDef="time">
-        <th mat-header-cell *matHeaderCellDef>Time (UTC)</th>
+        <th mat-header-cell *matHeaderCellDef>Fecha</th>
         <td mat-cell *matCellDef="let backup">{{ backup.time }}</td>
       </ng-container>
 
@@ -77,13 +69,13 @@
       <ng-container matColumnDef="actions">
         <th mat-header-cell *matHeaderCellDef>Acciones</th>
         <td mat-cell *matCellDef="let backup">
-          <button mat-icon-button color="primary" matTooltip="Descargar" aria-label="Descargar Backup" (click)="downloadBackup(backup)">
+          <button mat-icon-button color="primary" matTooltip="Descargar" (click)="downloadBackup(backup)">
             <mat-icon>download</mat-icon>
           </button>
-          <button mat-icon-button color="warn" matTooltip="Eliminar" aria-label="Eliminar Backup" (click)="deleteBackup(backup)">
+          <button mat-icon-button color="warn" matTooltip="Eliminar" (click)="deleteBackup(backup)">
             <mat-icon>delete</mat-icon>
           </button>
-          <button *ngIf="backup.name.includes('db_backup')" mat-icon-button color="accent" matTooltip="Restaurar este grupo" aria-label="Restaurar Backup" (click)="restoreBackup(backup)">
+          <button *ngIf="backup.name.includes('db_backup')" mat-icon-button color="accent" matTooltip="Restaurar grupo" (click)="restoreBackup(backup)">
             <mat-icon>restore</mat-icon>
           </button>
         </td>
@@ -91,15 +83,15 @@
 
       <tr mat-header-row *matHeaderRowDef="['name', 'time', 'actions']"></tr>
       <tr mat-row *matRowDef="let row; columns: ['name', 'time', 'actions'];"></tr>
-
     </table>
 
-    <!-- Botón Restaurar grupo completo -->
-    <div style="text-align: center; margin: 20px 0;">
-      <button mat-raised-button color="accent" (click)="restoreBackupGroup(group)" [disabled]="isRestoring && restoringGroupId === group.timestamp">
+    <!-- Restaurar grupo completo -->
+    <div style="text-align: center; margin-top: 15px;">
+      <button mat-raised-button color="accent"
+              (click)="restoreBackupGroup(group)"
+              [disabled]="isRestoring && restoringGroupId === group.timestamp">
         🔄 Restaurar este grupo
       </button>
     </div>
   </div>
-
 </div>

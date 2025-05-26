@@ -14,6 +14,10 @@
       <div class="instance-card" *ngFor="let inst of categorizedInstances[category] || []">
         <h4>{{ inst.name }}</h4>
         <a [href]="inst.url" target="_blank">🌐 Abrir</a>
+        <br />
+        <a [routerLink]="['/projects', projectName, 'instance', inst.name]" [queryParams]="{ category: inst.category }">
+          📊 Ver Detalle
+        </a>
       </div>
     </div>
   </div>

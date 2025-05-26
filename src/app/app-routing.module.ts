@@ -11,18 +11,30 @@ import { ProjectDashboardComponent } from './features/project-dashboard/project-
 import { ImportDatabaseComponent } from './features/import-database/import-database.component';
 import { LoginComponent } from './features/login/login.component';
 import { ShellDbComponent } from './features/shell-db/shell-db.component';
+import { InstanceDetailComponent } from './features/instance-detail/instance-detail.component';
+
 const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
   { path: 'dashboard', component: DashboardComponent },
   { path: 'project-setup', component: ProjectSetupComponent },
   { path: 'projects/:name/settings', component: SettingsComponent },
   { path: 'projects/:name/github', component: GithubComponent },
-  { path: 'projects/:name/backups', component: BackupsComponent },
+ 
   { path: 'login', component: LoginComponent },
   { path: 'projects/:name/logs', component: ShellComponent },
   { path: 'projects/:name', component: ProjectDashboardComponent },
   { path: 'projects/:name/import', component: ImportDatabaseComponent },
   { path: 'projects/:name/shelldb', component: ShellDbComponent },
+  {
+    path: 'projects/:projectName/instance/:instanceName',
+    component: InstanceDetailComponent,
+    children: [
+      { path: 'logs', component: ShellComponent },
+      { path: 'shell-db', component: ShellDbComponent },
+      { path: 'backups', component: BackupsComponent },
+      { path: 'import-db', component: ImportDatabaseComponent }
+    ]
+  },
   { path: '**', redirectTo: 'project-login' }
 ];
 @NgModule({

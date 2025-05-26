@@ -1,0 +1,35 @@
+<div class="instance-detail">
+  <div class="header">
+    <h2>{{ instanceName }} <span class="badge">{{ category }}</span></h2>
+    <p class="project-name">Proyecto: <strong>{{ projectName }}</strong></p>
+  </div>
+
+  <div class="actions">
+    <a mat-raised-button [ngClass]="{ active: currentTab === 'logs' }" color="primary"
+       [routerLink]="['/projects', projectName, 'instance', instanceName, 'logs']"
+       [queryParams]="{ category }">
+      📄 Logs
+    </a>
+
+    <a mat-raised-button [ngClass]="{ active: currentTab === 'shell-db' }" color="accent"
+       [routerLink]="['/projects', projectName, 'instance', instanceName, 'shell-db']"
+       [queryParams]="{ category }">
+      💻 Shell DB
+    </a>
+
+    <a mat-raised-button [ngClass]="{ active: currentTab === 'backups' }" color="warn"
+       [routerLink]="['/projects', projectName, 'instance', instanceName, 'backups']"
+       [queryParams]="{ category }">
+      💾 Backups
+    </a>
+
+    <a mat-raised-button [ngClass]="{ active: currentTab === 'import-db' }" color="primary"
+       [routerLink]="['/projects', projectName, 'instance', instanceName, 'import-db']"
+       [queryParams]="{ category }">
+      📤 Importar Base de Datos
+    </a>
+  </div>
+
+ 
+  <router-outlet></router-outlet>
+</div>

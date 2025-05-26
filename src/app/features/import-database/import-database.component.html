@@ -1,18 +1,19 @@
-<h2>📤 Importar Base de Datos</h2>
+<h2>Importar Base de Datos / Filestore</h2>
 
 <form (ngSubmit)="importDatabase()" #form="ngForm">
-  <mat-form-field appearance="fill" style="width: 100%;">
-    <mat-label>Selecciona una instancia</mat-label>
-    <mat-select [(ngModel)]="selectedInstance" name="instance" required>
-      <mat-option *ngFor="let inst of instances" [value]="inst">
-        {{ inst.name }} ({{ inst.category }})
-      </mat-option>
-    </mat-select>
-  </mat-form-field>
+  <!-- Instancia seleccionada -->
+  <div style="margin-bottom: 16px;">
+    <strong>Instancia Seleccionada:</strong>
+    <span *ngIf="selectedInstance">{{ selectedInstance.name }} ({{ selectedInstance.category }})</span>
+    <span *ngIf="!selectedInstance">Cargando...</span>
+  </div>
 
-  <input type="file" (change)="onFileSelected($event)" accept=".dump" required />
+  <!-- Selector de archivos -->
+  <input type="file" multiple (change)="onFilesSelected($event)" accept=".dump,.tar.gz" />
 
-  <button mat-raised-button color="primary" type="submit" [disabled]="!selectedFile || !selectedInstance">
+  <!-- Botón para importar -->
+  <button mat-raised-button color="primary" type="submit"
+          [disabled]="!selectedDbFile || !selectedInstance">
     Importar
   </button>
 </form>

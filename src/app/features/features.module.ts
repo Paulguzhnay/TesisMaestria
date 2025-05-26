@@ -31,6 +31,7 @@ import { LoginComponent } from './login/login.component';
 import { ShellDbComponent } from './shell-db/shell-db.component';
 
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { InstanceDetailComponent } from './instance-detail/instance-detail.component';
 
 
 @NgModule({
@@ -45,7 +46,8 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
     ProjectCreateDialogComponent,
     ImportDatabaseComponent,
     LoginComponent,
-    ShellDbComponent
+    ShellDbComponent,
+    InstanceDetailComponent
   ],
 
   imports: [

@@ -27,16 +27,18 @@ export class BackupService {
     return this.http.get<BackupInfo[]>(`${this.baseUrl}/backups?projectId=${projectId}`);
   }
 
-  createBackup(): Observable<string> {
-    return this.http.post<string>(`${this.baseUrl}/backups`, {}, {
-      responseType: 'text' as 'json'
-    });
-  }
+  getBackupsForInstance(instanceName: string, category: string): Observable<BackupInfo[]> {
+  return this.http.get<BackupInfo[]>(
+    `${this.baseUrl}/backups/instance?instanceName=${instanceName}&category=${category}`
+  );
+}
 
-  createBackupForInstance(payload: { name: string; category: string; projectId: number }): Observable<string> {
-    return this.http.post<string>(`${this.baseUrl}/backup`, payload, {
-      responseType: 'text' as 'json'
-    });
+ 
+
+  createBackupForInstance(payload: { name: string; category: string; projectId: number }): Observable<{ message: string }> {
+    console.log('Payload for backup service :', payload);
+    console.log('URL for backup service:', `${this.baseUrl}/backup`);
+    return this.http.post<{ message: string }>(`${this.baseUrl}/backup`, payload);
   }
 
   restoreSpecific(payload: {

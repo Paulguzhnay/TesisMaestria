@@ -94,7 +94,7 @@ export class DashboardComponent implements OnInit {
       }
 
     abrirProyecto(project: Project): void {
-      this.router.navigate([`/projects/${project.name}/backups`], {
+      this.router.navigate([`/projects/${project.name}`], {
         queryParams: { id: project.id }
       });
     }

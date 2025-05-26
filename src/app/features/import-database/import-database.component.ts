@@ -3,6 +3,8 @@ import { OdooService } from '../../services/odoo.service';
 import { HttpClient, HttpEventType } from '@angular/common/http';
 import { ActivatedRoute } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { ChangeDetectorRef } from '@angular/core';
+import { OdooInstance } from '../../models/odoo-instance.model';
 @Component({
   selector: 'app-import-database',
   standalone: false,
@@ -10,64 +12,99 @@ import { MatSnackBar } from '@angular/material/snack-bar';
   styleUrl: './import-database.component.css'
 })
 export class ImportDatabaseComponent implements OnInit {
-  instances: any[] = [];
-  selectedInstance: any;
+  instances: OdooInstance[] = [];
+  selectedInstance: OdooInstance | null = null;
   selectedFile: File | null = null;
   projectName: string = '';
   projectId: number = 0;
+  instanceName = '';
+  category = '';
+  selectedDbFile: File | null = null;
+  selectedOdooFile: File | null = null;
+
 
   constructor(
     private odooService: OdooService,
     private http: HttpClient,
     private route: ActivatedRoute,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private cdr: ChangeDetectorRef
   ) {}
 
     ngOnInit(): void {
-       console.log("ngOnInit de Import db se ha ejecutado");
-      this.route.paramMap.subscribe((params: import('@angular/router').ParamMap) => {
-        const nameFromRoute = params.get('name');
-        console.log("IDB Nombre del proyecto desde la ruta:", nameFromRoute);
-        if (nameFromRoute) {
-          this.projectName = decodeURIComponent(nameFromRoute);
-          console.log("IDB Proyecto detectado (parseado manual):", this.projectName);
+      const routeParams = this.route.parent?.paramMap;
+      const queryParams = this.route.snapshot.queryParamMap;
 
-          this.route.queryParamMap.subscribe((queryParams: import('@angular/router').ParamMap) => {
-            const idFromQuery = queryParams.get('id');
-            console.log("ID del proyecto desde la query:", idFromQuery);
-            if (idFromQuery) {
-              console.log("ID del proyecto detectado (parseado manual):", idFromQuery);
-              this.projectId = +idFromQuery;
-              this.loadInstancesForProject();
-            }
-          });
+      routeParams?.subscribe((params) => {
+        const projectName = params.get('projectName');
+        const instanceName = params.get('instanceName');
+        const category = queryParams.get('category');
+
+        console.log('🧭 Parámetros de ruta:', projectName, instanceName, category);
+
+        if (projectName && instanceName && category) {
+          this.projectName = decodeURIComponent(projectName);
+          this.instanceName = decodeURIComponent(instanceName);
+          this.category = category;
+
+          this.loadInstance(); // ✅ Cargar la instancia seleccionada automáticamente
         }
       });
     }
 
-  loadInstancesForProject(): void {
-    console.log('Project name:', this.projectName)
-    this.odooService.getByProject(this.projectName).subscribe({
-      next: (data) => {
-        this.instances = data;
-      },
-      error: () => console.error('Error al cargar instancias del proyecto')
+    loadInstance(): void {
+      this.odooService.getByProject(this.projectName).subscribe({
+        next: (data) => {
+          this.instances = data;
+          console.log('📦 Datos de instancias recibidos:', data);
+          const found = data.find(i => i.name === this.instanceName && i.category === this.category);
+          if (found) {
+            this.selectedInstance = found;
+            this.projectId = found.project?.id || 0;
+            console.log('✅ Instancia encontrada:', this.selectedInstance);
+            console.log('🆔 ID del proyecto desde instancia:', this.projectId);
+          }
+        },
+        error: () => console.error('❌ Error al cargar instancias del proyecto')
+      });
+    }
+
+onFilesSelected(event: any): void {
+  const files: FileList = event.target.files;
+
+  this.selectedDbFile = null;
+  this.selectedOdooFile = null;
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    if (file.name.endsWith('.dump')) {
+      this.selectedDbFile = file;
+    } else if (file.name.endsWith('.tar.gz')) {
+      this.selectedOdooFile = file;
+    }
+  }
+
+  if (!this.selectedDbFile) {
+    this.snackBar.open('❌ Debes seleccionar un archivo .dump para la base de datos.', 'Cerrar', {
+      duration: 6000,
+      panelClass: ['error-snackbar']
     });
   }
-
-  onFileSelected(event: any): void {
-    this.selectedFile = event.target.files[0] || null;
-  }
+}
 
     importDatabase(): void {
-      if (!this.selectedFile || !this.selectedInstance) return;
+      if (!this.selectedDbFile || !this.selectedInstance) return;
 
       const formData = new FormData();
-      formData.append('file', this.selectedFile);
+      formData.append('dbFile', this.selectedDbFile);
       formData.append('name', this.selectedInstance.name);
       formData.append('category', this.selectedInstance.category);
 
-      this.http.post('http://localhost:8080/docker/import-db', formData, {
+      if (this.selectedOdooFile) {
+        formData.append('odooFile', this.selectedOdooFile);
+      }
+
+      this.http.post('http://localhost:8080/docker/import-db-advanced', formData, {
         reportProgress: true,
         observe: 'events',
         responseType: 'text'
@@ -75,32 +112,14 @@ export class ImportDatabaseComponent implements OnInit {
         next: (event) => {
           if (event.type === HttpEventType.Response) {
             const responseText = event.body || '';
-
-            if (responseText.includes('✅')) {
-              this.snackBar.open('✅ Base de datos importada exitosamente.', 'Cerrar', {
-                duration: 6000,
-                panelClass: ['success-snackbar']
-              });
-            } else if (responseText.includes('⚠️') || responseText.toLowerCase().includes('advertencia')) {
-              this.snackBar.open('⚠️ Restauración completada con advertencias.', 'Cerrar', {
-                duration: 6000,
-                panelClass: ['warning-snackbar']
-              });
-            } else {
-              this.snackBar.open('ℹ️ Resultado: ' + responseText, 'Cerrar', {
-                duration: 6000
-              });
-            }
+            this.snackBar.open(responseText, 'Cerrar', { duration: 6000 });
           }
         },
         error: (err) => {
-          console.error('❌ Error al importar base de datos:', err);
-          this.snackBar.open('❌ Error al importar la base de datos.', 'Cerrar', {
-            duration: 6000,
-            panelClass: ['error-snackbar']
-          });
+          console.error('❌ Error al importar:', err);
+          this.snackBar.open('❌ Error al importar.', 'Cerrar', { duration: 6000 });
         }
       });
     }
-
 }
+

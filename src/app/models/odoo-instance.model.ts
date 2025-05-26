@@ -3,5 +3,10 @@ export interface OdooInstance {
   name: string;
   category: string;
   url: string;
-  containerName?: string;  
+  containerName?: string;
+  project?: {
+    id: number;
+    name: string;
+  };
+  
 }
