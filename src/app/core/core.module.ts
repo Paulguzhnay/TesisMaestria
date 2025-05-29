@@ -11,6 +11,7 @@ import { MatOptionModule }    from '@angular/material/core';
 import { MatButtonModule }    from '@angular/material/button';
 import { MatDialogModule }    from '@angular/material/dialog';
 import { MatSnackBarModule }  from '@angular/material/snack-bar';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 
 import { HeaderComponent } from './header/header.component';
 import { SidebarComponent } from './sidebar/sidebar.component';
@@ -36,7 +37,8 @@ import { CreateInstanceDialogComponent } from './create-instance-dialog/create-i
     MatOptionModule,
     MatButtonModule,
     MatDialogModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    MatCheckboxModule
   ],
   exports: [
     HeaderComponent,

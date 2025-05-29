@@ -98,24 +98,21 @@ constructor(
       }
 
 
-  openCreateDialog(): void {
-    const ref = this.dialog.open<
-    CreateInstanceDialogComponent,
-    CreateInstanceData>(CreateInstanceDialogComponent,{
-      width:'400px',
-      data: {
-        projectId: this.projectId,  
-        projectName: this.projectName
+  openCreateDialog(category: string): void {
+    const ref = this.dialog.open<CreateInstanceDialogComponent, CreateInstanceData>(
+      CreateInstanceDialogComponent, {
+        width: '400px',
+        data: {
+          projectId: this.projectId,
+          projectName: this.projectName,
+          category: category  // ⚠️ nuevo
+        }
       }
-    }
-  );
-    ref.afterClosed().subscribe(instance =>{
-      if(instance) {
-        this.snackBar.open(
-          `Instancia "${instance.name}" creada correctamente`,
-          'Cerrar',
-          {duration: 3000}
-        );
+    );
+
+    ref.afterClosed().subscribe(instance => {
+      if (instance) {
+        this.snackBar.open(`Instancia "${instance.name}" creada correctamente`, 'Cerrar', { duration: 3000 });
         this.loadInstancesByProject(this.projectName);
       }
     });

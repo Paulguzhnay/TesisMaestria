@@ -10,10 +10,10 @@ export class OdooService {
   private apiUrl = 'http://localhost:8080/api/odoo'; // Ajusta la URL según tu backend
   constructor(private http: HttpClient) {}
 
-  createOdooInstance(instanceName: string, category: string , projectId: number): Observable<{ message: string; url?: string }> {
+  createOdooInstance(name: string, category: string, projectId: number, neutralize: boolean = false): Observable<{ message: string; url?: string }> {
     return this.http.post<{ message: string; url?: string }>(
-      `${this.apiUrl}/create`, 
-      { name: instanceName, category, projectId }
+      `${this.apiUrl}/create`,
+      { name, category, projectId, neutralize }
     );
   }
 

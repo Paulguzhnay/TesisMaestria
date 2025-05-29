@@ -8,6 +8,9 @@ import { OdooService }                        from '../../services/odoo.service'
 export interface CreateInstanceData {
   projectId:   number;
   projectName: string;
+  category:   string;
+  
+
 }
 
 @Component({
@@ -19,6 +22,7 @@ export interface CreateInstanceData {
 export class CreateInstanceDialogComponent implements OnInit {
   form!: FormGroup;
   categories = ['DEVELOPMENT', 'STAGING', 'PRODUCTION'];
+  categoryValue: string ="";
 
   constructor(
     private fb: FormBuilder,
@@ -27,28 +31,29 @@ export class CreateInstanceDialogComponent implements OnInit {
     private odoo: OdooService,
   ) {}
 
-  ngOnInit(): void {
-    // Fallback en caso de que no venga projectName
-    const rawName    = this.data?.projectName ?? '';
-    const defaultCat = this.categories[0].toLowerCase();
+          ngOnInit(): void {
+            const rawName = this.data?.projectName ?? '';
+            const defaultCat = this.data?.category ?? this.categories[0];
 
-    this.form = this.fb.group({
-      name:     [`${rawName.toLowerCase()}-${defaultCat}`, Validators.required],
-      category: [ this.categories[0],             Validators.required ],
-    });
-  }
+            this.categoryValue = defaultCat;  
 
-  submit(): void {
-    if (this.form.invalid) {
-      return;
-    }
-    const { name, category } = this.form.value;
-    this.odoo.createOdooInstance(name, category, this.data.projectId)
-      .subscribe({
-        next: inst => this.dialogRef.close(inst),
-        error: err => this.form.setErrors({ server: err.error?.message })
-      });
-  }
+            this.form = this.fb.group({
+              name:       [`${rawName.toLowerCase()}-${defaultCat.toLowerCase()}`, Validators.required],
+              category:   [defaultCat, Validators.required],
+              neutralize: [false]
+            });
+          }
+
+      submit(): void {
+        if (this.form.invalid) return;
+
+        const { name, category, neutralize } = this.form.value;
+
+        this.odoo.createOdooInstance(name, category, this.data.projectId, neutralize).subscribe({
+          next: inst => this.dialogRef.close(inst),
+          error: err => this.form.setErrors({ server: err.error?.message })
+        });
+      }
 
   cancel(): void {
     this.dialogRef.close();

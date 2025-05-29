@@ -66,11 +66,31 @@ export class ProjectDashboardComponent implements OnInit {
     });
   }
   get categorizedInstances(): { [key: string]: OdooInstance[] } {
+    console.log('Categorizing instances:', this.instances);
+    
     return this.instances.reduce((acc, inst) => {
+    
       const cat = inst.category || 'UNASSIGNED';
+      console.log(inst.url);
       if (!acc[cat]) acc[cat] = [];
       acc[cat].push(inst);
       return acc;
     }, {} as { [key: string]: OdooInstance[] });
   }
+
+  deleteInstance(inst: OdooInstance): void {
+  const confirmed = confirm(`¿Estás seguro de eliminar la instancia '${inst.name}'?`);
+  if (!confirmed) return;
+
+  this.instanceService.delete(inst.name, inst.category).subscribe({
+    next: () => {
+      this.instances = this.instances.filter(i => !(i.name === inst.name && i.category === inst.category));
+
+    },
+    error: (err) => {
+      console.error('Error al eliminar:', err);
+      alert('❌ Error al eliminar la instancia');
+    }
+  });
+}
 }
