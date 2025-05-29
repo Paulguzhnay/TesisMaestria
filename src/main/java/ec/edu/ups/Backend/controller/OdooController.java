@@ -5,6 +5,7 @@ import ec.edu.ups.Backend.model.MergeRequest;
 import ec.edu.ups.Backend.model.OdooInstance;
 import ec.edu.ups.Backend.repository.OdooInstanceRepository;
 import ec.edu.ups.Backend.service.DockerService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -25,35 +26,38 @@ public class OdooController {
         this.odooInstanceRepository = odooInstanceRepository;
     }
 
-    @PostMapping("/create")
-    public Map<String, String> createInstance(@RequestBody InstanceRequest request) {
-        Map<String, String> response = new HashMap<>();
+        @PostMapping("/create")
+        public Map<String, String> createInstance(@RequestBody InstanceRequest request) {
+            Map<String, String> response = new HashMap<>();
 
-        try {
-            String url = dockerService.createOdooInstance(
-                    request.getName(),
-                    request.getCategory(),
-                    request.getProjectId()
-            );
+            try {
+                String url = dockerService.createOdooInstance(
+                        request.getName(),
+                        request.getCategory(),
+                        request.getProjectId(),
+                        request.isNeutralize()  //   nuevo parámetro
+                );
 
-            if (url != null && url.startsWith("http")) {
-                response.put("message", "Instancia de Odoo creada con éxito en " + request.getCategory());
-                response.put("url", url);
-            } else {
-                response.put("message", "Error: No se pudo crear la instancia.");
+                if (url != null && url.startsWith("http")) {
+                    response.put("message", "Instancia de Odoo creada con éxito en " + request.getCategory());
+                    response.put("url", url);
+                } else {
+                    response.put("message", "Error: No se pudo crear la instancia.");
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                response.put("message", "❌ Error inesperado: " + e.getMessage());
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-            response.put("message", "❌ Error inesperado: " + e.getMessage());
+
+            return response;
         }
 
-        return response;
-    }
 
     static class InstanceRequest {
         private String name;
         private String category;
         private Long projectId;
+        private boolean neutralize;
 
         public String getName() { return name; }
         public void setName(String name) { this.name = name; }
@@ -63,6 +67,9 @@ public class OdooController {
 
         public Long getProjectId() { return projectId; }
         public void setProjectId(Long projectId) { this.projectId = projectId; }
+        public boolean isNeutralize() { return neutralize; }
+
+        public void setNeutralize(boolean neutralize) { this.neutralize = neutralize;}
     }
 
     @GetMapping("/instances")
@@ -110,6 +117,20 @@ public class OdooController {
         }
     }
 
-
+    @DeleteMapping("/delete")
+    public ResponseEntity<String> deleteInstance(
+            @RequestParam String name,
+            @RequestParam String category) {
+        try {
+            String result = dockerService.deleteOdooInstance(name, category);
+            if (result.startsWith("❌")) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
+            }
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("❌ Error al eliminar la instancia: " + e.getMessage());
+        }
+    }
 
 }

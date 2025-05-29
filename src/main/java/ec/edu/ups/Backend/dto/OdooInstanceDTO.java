@@ -6,6 +6,11 @@ public class OdooInstanceDTO {
     private String name;
     private String category;
     private Long projectId;
+    private String url;
+    private boolean neutralize;
+
+
+
 
     public Long getProjectId() {
         return projectId;
@@ -30,12 +35,31 @@ public class OdooInstanceDTO {
     public void setCategory(String category) {
         this.category = category;
     }
+    public String getUrl() {
+        return url;
+    }
+
+    public void setUrl(String url) {
+        this.url = url;
+    }
+
+    public boolean isNeutralize() {
+        return neutralize;
+    }
+
+    public void setNeutralize(boolean neutralize) {
+        this.neutralize = neutralize;
+    }
+
 
     // Constructor
     public OdooInstanceDTO(OdooInstance instance) {
         this.name = instance.getName();
         this.category = instance.getCategory();
         this.projectId = instance.getProject().getId();
+        this.url = instance.getUrl();
+        this.neutralize = instance.isNeutralize();
+
 
 
     }

@@ -7,6 +7,8 @@ import ec.edu.ups.Backend.model.User;
 import ec.edu.ups.Backend.repository.OdooInstanceRepository;
 import ec.edu.ups.Backend.repository.ProjectRepository;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import jakarta.annotation.PostConstruct;
 import org.springframework.web.multipart.MultipartFile;
@@ -70,7 +72,7 @@ public class DockerService {
         this.projectRepository = projectRepository;
     }
 
-    public String createOdooInstance(String instanceName, String category, Long projectId) {
+    public String createOdooInstance(String instanceName, String category, Long projectId, boolean neutralize) {
         try {
             System.out.println("🚀 Iniciando método de creación de instancia...");
 
@@ -117,25 +119,28 @@ public class DockerService {
                 return "❌ Error: No se pudo preparar el volumen Odoo.";
             }
 
-            // 🌐 Buscar puerto
+            //  Buscar puerto
             int port = findAvailablePort(8069, 8100);
             if (port == -1) return "❌ Error: No hay puertos disponibles.";
 
-            // 🧩 Crear contenedor Odoo
+            //  Crear contenedor Odoo
+            String neutralizeEnv = neutralize ? "-e NEUTRALIZE=true " : "";
             String odooCommand = String.format(
                     "docker run -d --name %s --network %s " +
                             "-e HOST=%s -e USER=%s -e PASSWORD=%s -e DB=%s " +
+                            "%s" +  // Neutralize si aplica
                             "-p %d:8069 -v %s:/var/lib/odoo %s",
-                    odooContainerName, dockerNetwork, dbContainerName,
-                    postgresUser, postgresPassword, instanceName, port,
-                    odooVolume, odooImage
+                    odooContainerName, dockerNetwork,
+                    dbContainerName, postgresUser, postgresPassword, instanceName,
+                    neutralizeEnv,
+                    port, odooVolume, odooImage
             );
             System.out.println("odooCommand " + odooCommand);
             if (!executeCommand(new String[]{"cmd.exe", "/c", odooCommand})) {
                 return "❌ Error: No se pudo crear el contenedor de Odoo.";
             }
 
-            // ⏳ Esperar que Odoo pueda conectarse a PostgreSQL
+            //  Esperar que Odoo pueda conectarse a PostgreSQL
             System.out.println("⏳ Esperando conexión desde Odoo al contenedor PostgreSQL...");
             int retries = 10;
             boolean connected = false;
@@ -157,9 +162,10 @@ public class DockerService {
             }
 
             // 🧱 Inicializar base Odoo
+            String demoParam = category.equalsIgnoreCase("DEVELOPMENT") ? "all" : "False";
             String initDbCmd = String.format(
-                    "docker exec %s odoo -d %s -i base --db_host=%s --db_user=%s --db_password=%s --without-demo=all --stop-after-init",
-                    odooContainerName, instanceName, dbContainerName, postgresUser, postgresPassword
+                    "docker exec %s odoo -d %s -i base --db_host=%s --db_user=%s --db_password=%s --without-demo=%s --stop-after-init",
+                    odooContainerName, instanceName, dbContainerName, postgresUser, postgresPassword, demoParam
             );
 
 
@@ -168,17 +174,17 @@ public class DockerService {
                 return "❌ Error: No se pudo inicializar la base de datos en Odoo.";
             }
 
-            // 🌍 URL de acceso
-            String url = "http://localhost:" + port + "/web/database/selector";
+            //  URL de acceso
+            String url = "http://localhost:" + port + "/web/login?db=" + instanceName;
             System.out.println("url " + url);
 
-            // 💾 Guardar instancia
+            //  Guardar instancia
             Optional<Project> optionalProject = projectRepository.findById(projectId);
             if (optionalProject.isEmpty()) {
                 return "❌ Error: Proyecto no encontrado con ID: " + projectId;
             }
 
-            OdooInstance instance = new OdooInstance(instanceName, category, url);
+            OdooInstance instance = new OdooInstance(instanceName, category, url, neutralize);
             instance.setProject(optionalProject.get());
             odooInstanceRepository.save(instance);
 
@@ -483,9 +489,6 @@ public class DockerService {
         return backups;
     }
 
-
-
-
     //-----------------------
     private String getContainerName(String instanceName, String category, boolean isDatabase) {
         try {
@@ -512,7 +515,6 @@ public class DockerService {
             return null;
         }
     }
-
 
     //-----------------v1
     public String restoreBackup(String username, Long projectId, String instanceName, String category,
@@ -606,10 +608,6 @@ public class DockerService {
             return "❌ Error durante el restore: " + e.getMessage();
         }
     }
-
-
-
-
 
 
     public String mergeOdooInstances(Long projectId, String sourceInstance, String targetInstance) {
@@ -731,6 +729,7 @@ public class DockerService {
             return false;
         }
     }
+
     private void deleteTempFile(String filename) {
         File file = new File(filename);
         if (file.exists()) {
@@ -816,7 +815,7 @@ public class DockerService {
         return odooInstanceRepository.findByProjectName(projectName);
     }
 //------
-public String importDatabaseFromFile(MultipartFile file, String dbName, String category) throws IOException {
+    public String importDatabaseFromFile(MultipartFile file, String dbName, String category) throws IOException {
     // 1. Guardar archivo temporal
     Path tempPath = Files.createTempFile("upload-", ".dump");
     file.transferTo(tempPath.toFile());
@@ -898,7 +897,7 @@ public String importDatabaseFromFile(MultipartFile file, String dbName, String c
     }
 
 //SHEL DB
-public String executeSqlCommandInInstance(String command, String instanceName, String category) {
+    public String executeSqlCommandInInstance(String command, String instanceName, String category) {
     String containerName = String.format("odoo_instance_%s_%s_db", category.toUpperCase(), instanceName);
 
     // Seguridad: bloquear comandos destructivos
@@ -945,8 +944,8 @@ public String executeSqlCommandInInstance(String command, String instanceName, S
     }
 }
 
-//IMPORT DATABASE AND ODOO
-public String importDatabaseAndOdooFiles(MultipartFile dbFile, MultipartFile odooFile, String dbName, String category) throws IOException {
+    //IMPORT DATABASE AND ODOO
+    public String importDatabaseAndOdooFiles(MultipartFile dbFile, MultipartFile odooFile, String dbName, String category) throws IOException {
     // Guardar archivo temporal de la base de datos
     Path dbTempPath = Files.createTempFile("upload-db-", ".dump");
     dbFile.transferTo(dbTempPath.toFile());
@@ -1005,5 +1004,38 @@ public String importDatabaseAndOdooFiles(MultipartFile dbFile, MultipartFile odo
     return "✅ Base de datos restaurada exitosamente.";
 }
 
+    //DELETE INSTANCE
+    public String deleteOdooInstance(String name, String category) {
+        try {
+            String container = "odoo_instance_" + category + "_" + name;
+            String dbContainer = container + "_db";
+            String odooVolume = "odoo_" + name + "_data";
+            String dbVolume = "odoo_" + name + "_db_data";
+
+            System.out.println("🗑 Eliminando contenedor de Odoo: " + container);
+            executeCommand(new String[]{"cmd.exe", "/c", "docker rm -f " + container});
+
+            System.out.println("🗑 Eliminando contenedor de PostgreSQL: " + dbContainer);
+            executeCommand(new String[]{"cmd.exe", "/c", "docker rm -f " + dbContainer});
+
+            System.out.println("🗑 Eliminando volumen Odoo: " + odooVolume);
+            executeCommand(new String[]{"cmd.exe", "/c", "docker volume rm " + odooVolume});
+
+            System.out.println("🗑 Eliminando volumen DB: " + dbVolume);
+            executeCommand(new String[]{"cmd.exe", "/c", "docker volume rm " + dbVolume});
+
+            Optional<OdooInstance> optional = odooInstanceRepository.findAllByNameAndCategory(name, category).stream().findFirst();
+            if (optional.isEmpty()) {
+                return "✅ Contenedores eliminados. La instancia no estaba registrada en la base de datos.";
+            }
+
+            odooInstanceRepository.deleteByNameAndCategory(name, category);
+
+            return "✅ Instancia '" + name + "' (" + category + ") eliminada correctamente.";
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "❌ Error al eliminar instancia: " + e.getMessage();
+        }
+    }
 
 }
