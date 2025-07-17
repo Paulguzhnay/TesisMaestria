@@ -2,22 +2,17 @@
   <mat-card class="login-card">
     <h2>Iniciar Sesión</h2>
 
-    <form (ngSubmit)="onLogin()" #loginForm="ngForm">
-      <mat-form-field appearance="fill" class="full-width">
-        <mat-label>Usuario</mat-label>
-        <input matInput required [(ngModel)]="username" name="username" />
-      </mat-form-field>
+ 
+ 
+ 
+      <div style="text-align: center; margin-top: 15px;">
+        <button mat-stroked-button color="accent" (click)="loginWithGitHub()">
+          <img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" width="20" style="margin-right: 5px;" />
+          Iniciar sesión con GitHub
+        </button>
+      </div>
 
-      <mat-form-field appearance="fill" class="full-width">
-        <mat-label>Contraseña</mat-label>
-        <input matInput required [(ngModel)]="password" name="password" type="password" />
-      </mat-form-field>
-
-      <button mat-raised-button color="primary" type="submit" [disabled]="!loginForm.valid">
-        Iniciar sesión
-      </button>
-    </form>
-
-    <mat-error *ngIf="errorMessage">{{ errorMessage }}</mat-error>
+ 
+  
   </mat-card>
 </div>

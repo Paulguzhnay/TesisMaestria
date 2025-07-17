@@ -6,6 +6,8 @@ import { catchError, tap } from 'rxjs/operators';
 
 interface AuthResponse {
   token: string;
+  username: string;
+  avatarUrl: string;
 }
 
 @Injectable({

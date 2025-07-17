@@ -1,13 +1,20 @@
 <div class="dashboard-wrapper">
-
-  <!-- Título y Logout alineados -->
+  <!-- Barra superior -->
   <div class="header-bar">
-    <h1>Mis Proyectos</h1>
-  <!-- <button class="logout-btn" (click)="logout()">Cerrar sesión</button>-->
+    <h1 class="title">Mis Proyectos</h1>
+    <div class="user-actions">
+      <div class="user-info" *ngIf="username">
+        <img [src]="avatarUrl" width="32" height="32" class="avatar" />
+        <span class="username">{{ username }}</span>
+      </div>
+      <button class="logout-btn" (click)="logout()">Cerrar sesión</button>
+    </div>
   </div>
 
-  <!-- Botón para crear nuevo proyecto -->
-  <button class="create-btn" (click)="openCreateDialog()">+ Crear nuevo proyecto</button>
+  <!-- Botón crear -->
+  <div class="create-container">
+    <button class="create-btn" (click)="openCreateDialog()">+ Crear nuevo proyecto</button>
+  </div>
 
   <!-- Lista de proyectos -->
   <div class="project-grid">
@@ -17,7 +24,7 @@
         <li><strong>Versión:</strong> {{ project.version }}</li>
       </ul>
       <div class="card-actions">
-        <a class="open-btn" (click)="abrirProyecto(project)">Abrir</a>
+        <button class="open-btn" (click)="abrirProyecto(project)">Abrir</button>
         <button 
           class="delete-btn" 
           *ngIf="project.id !== undefined" 
@@ -27,5 +34,4 @@
       </div>
     </div>
   </div>
-
 </div>

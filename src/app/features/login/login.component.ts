@@ -28,4 +28,7 @@ export class LoginComponent {
       }
     });
   }
+  loginWithGitHub(): void {
+  window.location.href = 'http://localhost:8080/auth/login/github';
+}
 }

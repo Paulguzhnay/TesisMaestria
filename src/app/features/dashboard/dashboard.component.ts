@@ -16,6 +16,9 @@ import { ConfirmDialogComponent } from '../../shared/confirm-dialog/confirm-dial
 })
 export class DashboardComponent implements OnInit {
   projects: Project[] = [];
+
+  username: string | null = '';
+  avatarUrl: string | null = '';
  
 
   constructor(private projectService: ProjectService, 
@@ -24,6 +27,12 @@ export class DashboardComponent implements OnInit {
     private snackBar: MatSnackBar) {}
 
     ngOnInit(): void {
+
+      this.username = localStorage.getItem('username');
+      this.avatarUrl = localStorage.getItem('avatarUrl');
+
+
+
       this.projectService.getByUser().subscribe({
         next: (projects) => {
           this.projects = projects;
@@ -100,8 +109,10 @@ export class DashboardComponent implements OnInit {
     }
 
       // Método de logout
-    logout(): void {
-      localStorage.removeItem('token'); // o el nombre exacto de tu token
-      this.router.navigate(['/login']); // Ajusta la ruta si tu login está en otra
-    }
+logout(): void {
+  localStorage.removeItem('token');
+  localStorage.removeItem('username');
+  localStorage.removeItem('avatarUrl');
+  this.router.navigate(['/login']);
+}
 }

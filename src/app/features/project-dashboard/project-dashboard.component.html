@@ -4,7 +4,7 @@
     <p><strong>Versión:</strong> {{ project.version }}</p>
   </div>
 
-  <div *ngIf="loading" class="loading">🔄 Cargando instancias...</div>
+  <div *ngIf="loading" class="loading"> Cargando instancias...</div>
   <div *ngIf="error" class="error">{{ error }}</div>
 
   <div class="category-wrapper" *ngFor="let category of ['DEVELOPMENT', 'STAGING', 'PRODUCTION']">
@@ -18,7 +18,7 @@
         <br />
          <button (click)="deleteInstance(inst)">🗑️ Eliminar</button>
         <a [routerLink]="['/projects', projectName, 'instance', inst.name]" [queryParams]="{ category: inst.category }">
-          📊 Ver Detalle
+           Ver Detalle
         </a>
       </div>
     </div>

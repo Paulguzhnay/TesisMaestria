@@ -32,6 +32,7 @@ import { ShellDbComponent } from './shell-db/shell-db.component';
 
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { InstanceDetailComponent } from './instance-detail/instance-detail.component';
+import { GithubCallbackComponent } from './github-callback/github-callback.component';
 
 
 @NgModule({
@@ -47,7 +48,8 @@ import { InstanceDetailComponent } from './instance-detail/instance-detail.compo
     ImportDatabaseComponent,
     LoginComponent,
     ShellDbComponent,
-    InstanceDetailComponent
+    InstanceDetailComponent,
+    GithubCallbackComponent
   ],
 
   imports: [

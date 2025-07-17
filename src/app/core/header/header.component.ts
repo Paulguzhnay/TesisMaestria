@@ -13,11 +13,16 @@ export class HeaderComponent implements OnInit {
   backups: string[] = [];
   projectName: string = '';
   projectId!: number;
+ 
+
 constructor(private backupService: BackupService, private router: Router,
   private context: ProjectContextService,
   private route: ActivatedRoute) {}
 
     ngOnInit(): void {
+ 
+
+      //---------------
       this.router.events.subscribe(() => {
         const pathParts = this.router.url.split('/');
         const projectIndex = pathParts.indexOf('projects');

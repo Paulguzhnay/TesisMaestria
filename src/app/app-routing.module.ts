@@ -12,6 +12,7 @@ import { ImportDatabaseComponent } from './features/import-database/import-datab
 import { LoginComponent } from './features/login/login.component';
 import { ShellDbComponent } from './features/shell-db/shell-db.component';
 import { InstanceDetailComponent } from './features/instance-detail/instance-detail.component';
+import { GithubCallbackComponent } from './features/github-callback/github-callback.component';
 
 const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
@@ -25,6 +26,7 @@ const routes: Routes = [
   { path: 'projects/:name', component: ProjectDashboardComponent },
   { path: 'projects/:name/import', component: ImportDatabaseComponent },
   { path: 'projects/:name/shelldb', component: ShellDbComponent },
+  { path: 'github-callback', component: GithubCallbackComponent },
   {
     path: 'projects/:projectName/instance/:instanceName',
     component: InstanceDetailComponent,

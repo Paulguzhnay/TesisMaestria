@@ -1,130 +1,118 @@
 .dashboard-wrapper {
-  padding: 2rem;
-  background: #f8f8f8;
-  min-height: calc(100vh - 120px); /* Ajuste según header + footer */
-}
-
-h1 {
-  font-size: 2rem;
-  margin-bottom: 1.5rem;
-  color: #333;
-}
-
-.create-btn {
-  background-color: #0cc5c2;
-  color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
-  font-weight: bold;
-  cursor: pointer;
-  margin-bottom: 2rem;
-  transition: background-color 0.3s ease;
-}
-
-.create-btn:hover {
-  background-color: #0aa9a6;
-}
-
-.project-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 1.5rem;
-  animation: fadeIn 0.3s ease-in-out;
-}
-
-.project-card {
-  background: white;
-  border-radius: 10px;
-  padding: 1rem;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.07);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.project-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 16px rgba(0,0,0,0.1);
-}
-
-.project-card h3 {
-  font-size: 1.1rem;
-  margin-top: 0;
-  color: #222;
-}
-
-.project-card ul {
-  list-style: none;
-  padding: 0;
-  margin: 1rem 0;
-}
-
-.project-card li {
-  color: #555;
-  font-size: 0.95rem;
-}
-
-.card-actions {
-  display: flex;
-  justify-content: flex-start;
-  border-top: 1px solid #eee;
-  padding-top: 0.5rem;
-  margin-top: 1rem;
-}
-
-.open-btn {
-  background: #0cc5c2;
-  color: white;
-  border: none;
-  padding: 0.4rem 0.8rem;
-  border-radius: 6px;
-  font-weight: 500;
-  text-decoration: none;
-  font-size: 0.9rem;
-  transition: background-color 0.3s ease;
-}
-
-.open-btn:hover {
-  background-color: #0aa9a6;
-}
-
-/* Fade-in animation */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.delete-btn {
-  background-color: #f44336;
-  color: white;
-  border: none;
-  padding: 0.4rem 0.8rem;
-  border-radius: 6px;
-  font-weight: 500;
-  cursor: pointer;
-  margin-left: 0.5rem;
-  transition: background-color 0.3s ease;
-}
-
-.delete-btn:hover {
-  background-color: #d32f2f;
+  padding: 24px;
+  max-width: 1200px;
+  margin: auto;
+  font-family: 'Segoe UI', sans-serif;
 }
 
 .header-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 15px;
+  margin-bottom: 24px;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.user-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  font-size: 16px;
+}
+
+.avatar {
+  border-radius: 50%;
+}
+
+.username {
+  margin-left: 8px;
+  font-weight: 500;
 }
 
 .logout-btn {
-  background-color: #f44336;
+  background-color: #e74c3c;
   color: white;
   border: none;
-  padding: 8px 16px;
-  font-weight: bold;
-  border-radius: 4px;
+  padding: 8px 14px;
+  border-radius: 6px;
   cursor: pointer;
 }
 
 .logout-btn:hover {
-  background-color: #d32f2f;
+  background-color: #c0392b;
+}
+
+.create-container {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 16px;
+}
+
+.create-btn {
+  background-color: #3498db;
+  color: white;
+  border: none;
+  padding: 10px 18px;
+  font-weight: bold;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.create-btn:hover {
+  background-color: #2980b9;
+}
+
+.project-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+.project-card {
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 16px;
+  background-color: #fff;
+  box-shadow: 0px 2px 6px rgba(0,0,0,0.1);
+}
+
+.card-actions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.open-btn {
+  background-color: #2ecc71;
+  border: none;
+  padding: 6px 12px;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.open-btn:hover {
+  background-color: #27ae60;
+}
+
+.delete-btn {
+  background-color: #e74c3c;
+  border: none;
+  padding: 6px 12px;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.delete-btn:hover {
+  background-color: #c0392b;
 }
