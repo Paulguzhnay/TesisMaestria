@@ -87,7 +87,7 @@ public class DockerService {
             System.out.println("dbVolume " + dbVolume);
             System.out.println("odooVolume " + odooVolume);
 
-            // 🐘 Crear contenedor PostgreSQL
+            //  Crear contenedor PostgreSQL
             String dbCommand = String.format(
                     "docker run -d --name %s --network %s " +
                             "-e POSTGRES_USER=%s -e POSTGRES_PASSWORD=%s -e POSTGRES_DB=%s " +
@@ -102,7 +102,7 @@ public class DockerService {
 
             Thread.sleep(4000);
 
-            // 🛠️ Crear base real
+            //  Crear base real
             String createDbCmd = String.format("docker exec %s createdb -U %s %s", dbContainerName, postgresUser, instanceName);
             System.out.println("createDbCmd " + createDbCmd);
             if (!executeCommand(new String[]{"cmd.exe", "/c", createDbCmd})) {
@@ -128,7 +128,7 @@ public class DockerService {
             String odooCommand = String.format(
                     "docker run -d --name %s --network %s " +
                             "-e HOST=%s -e USER=%s -e PASSWORD=%s -e DB=%s " +
-                            "%s" +  // Neutralize si aplica
+                            "%s" +
                             "-p %d:8069 -v %s:/var/lib/odoo %s",
                     odooContainerName, dockerNetwork,
                     dbContainerName, postgresUser, postgresPassword, instanceName,
@@ -161,7 +161,7 @@ public class DockerService {
                 return "❌ Error: Odoo no pudo conectarse a PostgreSQL después de varios intentos.";
             }
 
-            // 🧱 Inicializar base Odoo
+            //  Inicializar base Odoo
             String demoParam = category.equalsIgnoreCase("DEVELOPMENT") ? "all" : "False";
             String initDbCmd = String.format(
                     "docker exec %s odoo -d %s -i base --db_host=%s --db_user=%s --db_password=%s --without-demo=%s --stop-after-init",
