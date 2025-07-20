@@ -6,6 +6,7 @@ import ec.edu.ups.Backend.model.Project;
 import ec.edu.ups.Backend.model.User;
 import ec.edu.ups.Backend.repository.OdooInstanceRepository;
 import ec.edu.ups.Backend.repository.ProjectRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -62,6 +63,9 @@ public class DockerService {
 
     @Value("${docker.postgres.shared.dbname}")
     private String postgresSharedDbName;
+
+    @Autowired
+    private GithubService githubService;
 
     private final OdooInstanceRepository odooInstanceRepository;
 
@@ -188,6 +192,10 @@ public class DockerService {
             instance.setProject(optionalProject.get());
             odooInstanceRepository.save(instance);
 
+            createGitHubBranch(optionalProject.get(), instanceName, category);
+
+
+
             System.out.println("✅ Instancia creada exitosamente en " + url);
             return url;
 
@@ -197,6 +205,32 @@ public class DockerService {
         }
     }
 
+    //Metodo para crear una rama en github
+    private void createGitHubBranch(Project project, String instanceName, String category) {
+        try {
+            User user = project.getUser();
+
+            if (user == null || user.getGithubToken() == null) {
+                System.out.println("⚠️ Usuario no tiene token de GitHub. Rama no creada.");
+                return;
+            }
+
+            String repo = project.getName().replaceAll("\\s+", "-");
+            String branchName = category.toLowerCase() + "-" + instanceName.replaceAll("\\s+", "-");
+
+            githubService.createBranch(
+                    user.getGithubToken(),
+                    user.getUsername(),
+                    repo,
+                    branchName
+            );
+
+            System.out.println("✅ Rama de GitHub creada: " + branchName);
+
+        } catch (Exception e) {
+            System.err.println("❌ Error al crear la rama en GitHub: " + e.getMessage());
+        }
+    }
     // Método auxiliar para buscar un puerto libre
     private int findAvailablePort(int startPort, int endPort) {
         for (int port = startPort; port <= endPort; port++) {

@@ -11,10 +11,10 @@ public class Project {
     private Long id;
 
     private String name;
-    private String license; // "Trial" o "Valid"
-    private String status;  // "Development", "Production"
+    private String license;
+    private String status;
     private String version;
-    private String location; // "Europe", "Americas", etc.
+    private String location;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")

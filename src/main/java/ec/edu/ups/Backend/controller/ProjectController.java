@@ -4,9 +4,10 @@ import ec.edu.ups.Backend.model.Project;
 import ec.edu.ups.Backend.model.User;
 import ec.edu.ups.Backend.repository.ProjectRepository;
 import ec.edu.ups.Backend.repository.UserRepository;
+import ec.edu.ups.Backend.service.GithubService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
+import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,6 +17,9 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/projects")
 public class ProjectController {
+
+    @Autowired
+    private GithubService githubService;
 
     @Autowired
     private ProjectRepository projectRepo;
@@ -51,15 +55,26 @@ public class ProjectController {
     }
 
     @PostMapping
-    public ResponseEntity<Project> create(@RequestBody Project project, Authentication authentication) {
+    public ResponseEntity<?> create(@RequestBody Project project, Authentication authentication) {
         String username = authentication.getName();
         Optional<User> userOpt = userRepo.findByUsername(username);
 
         if (userOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Usuario no válido");
         }
 
-        project.setUser(userOpt.get());
+        User user = userOpt.get();
+        project.setUser(user);
+
+        try {
+            githubService.createRepository(user.getGithubToken(), project.getName());
+        } catch (AuthenticationCredentialsNotFoundException ex) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token de GitHub expirado o inválido. Vuelva a iniciar sesión.");
+        } catch (Exception e) {
+            System.err.println("❌ Error general al crear repositorio: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error creando repositorio en GitHub: " + e.getMessage());
+        }
+
         Project savedProject = projectRepo.save(project);
         return ResponseEntity.ok(savedProject);
     }

@@ -6,6 +6,7 @@ import ec.edu.ups.Backend.model.User;
 import ec.edu.ups.Backend.repository.UserRepository;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -17,6 +18,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
+import java.net.URI;
+import java.util.List;
 import java.util.Map;
 
 
@@ -34,8 +37,12 @@ public class AuthController {
     @Autowired
     private UserRepository userRepository;
 
+    @Value("${github.client.secret}")
+    private String clientSecret;
+
     private final String clientId = "Ov23li4hBkj65uMbYvc6";
-    private final String clientSecret = "f392bcbcf77f0507955f489f20fa86125fcd01a2";
+
+
 
 
 
@@ -59,7 +66,7 @@ public class AuthController {
     }
 
     @GetMapping("/github/callback")
-    public ResponseEntity<AuthResponse> githubCallback(@RequestParam String code) {
+    public ResponseEntity<Void> githubCallback(@RequestParam String code) {
         RestTemplate restTemplate = new RestTemplate();
 
         // Paso 1: Intercambiar el código por un access_token
@@ -72,7 +79,7 @@ public class AuthController {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-        headers.setAccept(java.util.List.of(MediaType.APPLICATION_JSON));
+        headers.setAccept(List.of(MediaType.APPLICATION_JSON));
 
         HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(body, headers);
 
@@ -98,19 +105,31 @@ public class AuthController {
 
         Map userData = userInfoResponse.getBody();
         String username = (String) userData.get("login");
+        String avatarUrl = (String) userData.get("avatar_url");
 
         // Paso 3: Generar JWT para nuestra app
         String token = jwtUtil.generateToken(username);
 
-        // (Opcional) Registrar en base de datos si no existe
-        userRepository.findByUsername(username).orElseGet(() -> {
+        // Registrar o actualizar en base de datos
+        User user = userRepository.findByUsername(username).orElseGet(() -> {
             User newUser = new User();
             newUser.setUsername(username);
-            newUser.setPassword(""); // Sin password ya que viene de GitHub
-            return userRepository.save(newUser);
+            newUser.setPassword(""); // GitHub login
+            return newUser;
         });
 
-        String avatarUrl = (String) userData.get("avatar_url");
-        return ResponseEntity.ok(new AuthResponse(token, username, avatarUrl));
+        user.setGithubToken(accessToken);
+        userRepository.save(user);
+
+        // Redirección al frontend con parámetros
+        String redirectUrl = "http://localhost:4200/github-callback" +
+                "?token=" + token +
+                "&username=" + username +
+                "&avatar=" + avatarUrl;
+
+        HttpHeaders redirectHeaders = new HttpHeaders();
+        redirectHeaders.setLocation(URI.create(redirectUrl));
+        return new ResponseEntity<>(redirectHeaders, HttpStatus.FOUND);
     }
+
 }

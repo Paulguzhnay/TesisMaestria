@@ -26,31 +26,36 @@ public class OdooController {
         this.odooInstanceRepository = odooInstanceRepository;
     }
 
-        @PostMapping("/create")
-        public Map<String, String> createInstance(@RequestBody InstanceRequest request) {
-            Map<String, String> response = new HashMap<>();
+    @PostMapping("/create")
+    public Map<String, String> createInstance(@RequestBody InstanceRequest request) {
+        Map<String, String> response = new HashMap<>();
 
-            try {
-                String url = dockerService.createOdooInstance(
-                        request.getName(),
-                        request.getCategory(),
-                        request.getProjectId(),
-                        request.isNeutralize()  //   nuevo parámetro
-                );
+        try {
+            String url = dockerService.createOdooInstance(
+                    request.getName(),
+                    request.getCategory(),
+                    request.getProjectId(),
+                    request.isNeutralize()
+            );
 
-                if (url != null && url.startsWith("http")) {
-                    response.put("message", "Instancia de Odoo creada con éxito en " + request.getCategory());
-                    response.put("url", url);
-                } else {
-                    response.put("message", "Error: No se pudo crear la instancia.");
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-                response.put("message", "❌ Error inesperado: " + e.getMessage());
+            if (url != null && url.startsWith("http")) {
+                response.put("message", "Instancia de Odoo creada con éxito en " + request.getCategory());
+                response.put("url", url);
+
+                // También devolver nombre de la rama sugerida
+                String branchName = request.getCategory().toLowerCase() + "-" + request.getName().replaceAll("\\s+", "-");
+                response.put("branch", branchName);
+
+            } else {
+                response.put("message", "❌ Error: No se pudo crear la instancia.");
             }
-
-            return response;
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.put("message", "❌ Error inesperado: " + e.getMessage());
         }
+
+        return response;
+    }
 
 
     static class InstanceRequest {
