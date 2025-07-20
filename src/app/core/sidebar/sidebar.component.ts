@@ -1,10 +1,12 @@
 import { Component, OnInit } from '@angular/core';
 import { OdooService } from '../../services/odoo.service';
-import { MatSnackBar } from '@angular/material/snack-bar'; 
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
-import { CreateInstanceData, 
-  CreateInstanceDialogComponent } from '../create-instance-dialog/create-instance-dialog.component';
+import {
+  CreateInstanceData,
+  CreateInstanceDialogComponent
+} from '../create-instance-dialog/create-instance-dialog.component';
 
 @Component({
   selector: 'app-sidebar',
@@ -22,92 +24,105 @@ export class SidebarComponent implements OnInit {
 
   selectedSource: any = null;
   selectedTarget: any = null;
- 
 
-constructor(
-  private odooService: OdooService,
-  private router: Router,
-  private route: ActivatedRoute,
-  private snackBar: MatSnackBar,
-  private dialog: MatDialog
-) {
-   
-  this.router.events.subscribe(() => {
-    const current = this.router.url;
-    const urlTree = this.router.parseUrl(current);
-    const segments = urlTree.root.children['primary']?.segments;
 
-    const nameSegment = segments?.[1]?.path;  
-    const idParam = urlTree.queryParams['id'];
+  constructor(
+    private odooService: OdooService,
+    private router: Router,
+    private route: ActivatedRoute,
+    private snackBar: MatSnackBar,
+    private dialog: MatDialog
+  ) {
 
-    if (nameSegment) {
-      this.projectName = decodeURIComponent(nameSegment);
-      console.log(" Proyecto detectado (parseado manual):", this.projectName);
-    }
+    this.router.events.subscribe(() => {
+      const current = this.router.url;
+      const urlTree = this.router.parseUrl(current);
+      const segments = urlTree.root.children['primary']?.segments;
 
-    if (idParam) {
-      this.projectId = +idParam;
-      console.log(" ID del proyecto detectado (parseado manual):", this.projectId);
-    }
+      const nameSegment = segments?.[1]?.path;
+      const idParam = urlTree.queryParams['id'];
 
-    if (this.projectName && this.projectId) {
-      this.loadInstancesByProject(this.projectName);
-    }
-  });
-}
+      if (nameSegment) {
+        this.projectName = decodeURIComponent(nameSegment);
+        console.log(" Proyecto detectado (parseado manual):", this.projectName);
+      }
 
-      ngOnInit(): void {
-        console.log("✅ ngOnInit de SidebarComponent se ha ejecutado");
-        this.route.paramMap.subscribe(params => {
-          console.log("Parámetros de la ruta:", params.get('name'));
-          const nameFromRoute = params.get('name');
-          if (nameFromRoute) {
-            console.log("Nombre del proyecto desde la ruta:", nameFromRoute);
-            this.projectName = decodeURIComponent(nameFromRoute);
-            console.log("Proyecto detectado:", this.projectName);
+      if (idParam) {
+        this.projectId = +idParam;
+        console.log(" ID del proyecto detectado (parseado manual):", this.projectId);
+      }
 
-            this.route.queryParamMap.subscribe(queryParams => {
-              const idFromQuery = queryParams.get('id');
-              if (idFromQuery) {
-                this.projectId = +idFromQuery;
-                console.log("IID del proyecto detectado:", this.projectId);
+      if (this.projectName && this.projectId) {
+        this.loadInstancesByProject(this.projectName);
+      }
+    });
+  }
 
-                //Ahora sí, ambos están listos
-                console.log("Cargando instancias para el proyecto:", this.projectName);
-                this.loadInstancesByProject(this.projectName);
-              }
-            });
+  ngOnInit(): void {
+    console.log("✅ ngOnInit de SidebarComponent se ha ejecutado");
+    this.route.paramMap.subscribe(params => {
+      console.log("Parámetros de la ruta:", params.get('name'));
+      const nameFromRoute = params.get('name');
+      if (nameFromRoute) {
+        console.log("Nombre del proyecto desde la ruta:", nameFromRoute);
+        this.projectName = decodeURIComponent(nameFromRoute);
+        console.log("Proyecto detectado:", this.projectName);
+
+        this.route.queryParamMap.subscribe(queryParams => {
+          const idFromQuery = queryParams.get('id');
+          if (idFromQuery) {
+            this.projectId = +idFromQuery;
+            console.log("IID del proyecto detectado:", this.projectId);
+
+            //Ahora sí, ambos están listos
+            console.log("Cargando instancias para el proyecto:", this.projectName);
+            this.loadInstancesByProject(this.projectName);
           }
         });
       }
+    });
+  }
 
-      loadInstancesByProject(projectName: string): void {
-        console.log("Cargando instancias para el proyecto:", projectName);
-        this.odooService.getByProject(projectName).subscribe({
-          next: (instances) => {
-            console.log("Instancias cargadas:", instances);
-            this.allInstances = instances;
-            this.productionBranches = instances.filter(inst => inst.category === 'PRODUCTION');
-            this.stagingBranches = instances.filter(inst => inst.category === 'STAGING');
-            this.developmentBranches = instances.filter(inst => inst.category === 'DEVELOPMENT');
-          },
-          error: (error) => {
-            console.error('Error al cargar instancias:', error);
-          }
-        });
+  loadInstancesByProject(projectName: string): void {
+    console.log("Cargando instancias para el proyecto:", projectName);
+    this.odooService.getByProject(projectName).subscribe({
+      next: (instances) => {
+        console.log("Instancias cargadas:", instances);
+        this.allInstances = instances;
+        this.productionBranches = instances.filter(inst => inst.category === 'PRODUCTION');
+        this.stagingBranches = instances.filter(inst => inst.category === 'STAGING');
+        this.developmentBranches = instances.filter(inst => inst.category === 'DEVELOPMENT');
+      },
+      error: (error) => {
+        console.error('Error al hacer merge:', error);
+
+        if (error.status === 401) {
+          this.snackBar.open('⚠️ Token expirado. Redirigiendo a GitHub...', 'Cerrar', {
+            duration: 6000,
+            panelClass: ['error-snackbar']
+          });
+          this.odooService.handleUnauthorized();
+        } else {
+          this.snackBar.open('❌ Error grave al hacer merge. Revisa los logs del backend.', 'Cerrar', {
+            duration: 6000,
+            panelClass: ['error-snackbar']
+          });
+        }
       }
+    });
+  }
 
 
   openCreateDialog(category: string): void {
     const ref = this.dialog.open<CreateInstanceDialogComponent, CreateInstanceData>(
       CreateInstanceDialogComponent, {
-        width: '400px',
-        data: {
-          projectId: this.projectId,
-          projectName: this.projectName,
-          category: category  // ⚠️ nuevo
-        }
+      width: '400px',
+      data: {
+        projectId: this.projectId,
+        projectName: this.projectName,
+        category: category  // ⚠️ nuevo
       }
+    }
     );
 
     ref.afterClosed().subscribe(instance => {
@@ -130,43 +145,18 @@ constructor(
       },
       error: (error) => {
         console.error('Error al cargar instancias:', error);
+
+        if (error.status === 401) {
+          this.snackBar.open('⚠️ Token de GitHub expirado. Redirigiendo a login...', 'Cerrar', {
+            duration: 4000,
+            panelClass: 'error-snackbar'
+          });
+          this.odooService.handleUnauthorized();
+        }
       }
     });
   }
 
-  /*addOdooInstance(category: string): void {
-    const instanceName = prompt(`Ingrese el nombre de la nueva instancia en ${category}:`);
-    if (instanceName) {
-      const newTab = window.open("", "_blank");
-      if (newTab) {
-        newTab.document.write("<p style='font-size:20px; text-align:center;'>Creando la instancia de Odoo... Por favor, espere.</p>");
-      }
-
-      this.odooService.createOdooInstance(instanceName, category).subscribe({
-        next: (response) => {
-          alert(response.message);
-
-          if (response.url) {
-            console.log("Redirigiendo a:", response.url);
-            if (newTab) {
-              newTab.location.href = response.url;
-            } else {
-              alert("No se pudo abrir automáticamente. Acceda a: " + response.url);
-            }
-
-            this.loadInstances(); // 🔥 Recargar para actualizar la lista
-          } else {
-            alert("Error: La URL de Odoo no está disponible.");
-          }
-        },
-        error: (error) => {
-          console.error('Error al crear instancia:', error);
-          alert('❌ Error creando instancia.');
-        }
-      });
-    }
-  }
-*/
 
 
   mergeBranches(): void {
@@ -174,43 +164,55 @@ constructor(
       this.snackBar.open('Selecciona instancia origen y destino para hacer el merge.', 'Cerrar', { duration: 4000 });
       return;
     }
-  
+
     if (this.selectedSource.name === this.selectedTarget.name) {
       this.snackBar.open('No puedes hacer merge de la misma instancia sobre sí misma.', 'Cerrar', { duration: 4000 });
       return;
     }
-  
+
     const confirmacion = confirm(`¿Seguro que quieres hacer merge de ${this.selectedSource.name} ➡️ ${this.selectedTarget.name}?`);
     if (!confirmacion) return;
     console.log(" Enviando payload de merge:", {
-                  source: this.selectedSource.name,
-                  target: this.selectedTarget.name,
-                  projectId: this.projectId
-                });
-  
-    this.odooService.mergeInstances(
-      this.selectedSource.name, 
-      this.selectedTarget.name, 
-      this.projectId).subscribe({
-      next: (response) => {
-        console.log('Respuesta del merge:', response);
-  
-        if (response.includes('✅')) {
-          this.snackBar.open(`✅ Merge exitoso: ${response}`, 'Cerrar', { duration: 6000, panelClass: ['success-snackbar'] });
-        } else if (response.includes('⚠️')) {
-          this.snackBar.open(`⚠️ Merge con advertencias: ${response}`, 'Cerrar', { duration: 6000, panelClass: ['warning-snackbar'] });
-        } else if (response.includes('❌')) {
-          this.snackBar.open(`❌ Error en el merge: ${response}`, 'Cerrar', { duration: 6000, panelClass: ['error-snackbar'] });
-        } else {
-          this.snackBar.open(`ℹ️ Resultado del merge: ${response}`, 'Cerrar', { duration: 6000 });
-        }
-  
-        this.loadInstances();
-      },
-      error: (error) => {
-        console.error('Error al hacer merge:', error);
-        this.snackBar.open('❌ Error grave al hacer merge. Revisa los logs del backend.', 'Cerrar', { duration: 6000, panelClass: ['error-snackbar'] });
-      }
+      source: this.selectedSource.name,
+      target: this.selectedTarget.name,
+      projectId: this.projectId
     });
+
+    this.odooService.mergeInstances(
+      this.selectedSource.name,
+      this.selectedTarget.name,
+      this.projectId).subscribe({
+        next: (response) => {
+          console.log('Respuesta del merge:', response);
+
+          if (response.includes('✅')) {
+            this.snackBar.open(`✅ Merge exitoso: ${response}`, 'Cerrar', { duration: 6000, panelClass: ['success-snackbar'] });
+          } else if (response.includes('⚠️')) {
+            this.snackBar.open(`⚠️ Merge con advertencias: ${response}`, 'Cerrar', { duration: 6000, panelClass: ['warning-snackbar'] });
+          } else if (response.includes('❌')) {
+            this.snackBar.open(`❌ Error en el merge: ${response}`, 'Cerrar', { duration: 6000, panelClass: ['error-snackbar'] });
+          } else {
+            this.snackBar.open(`ℹ️ Resultado del merge: ${response}`, 'Cerrar', { duration: 6000 });
+          }
+
+          this.loadInstances();
+        },
+        error: (error) => {
+          console.error('Error al hacer merge:', error);
+
+          if (error.status === 401) {
+            this.snackBar.open('⚠️ Token expirado. Redirigiendo a GitHub...', 'Cerrar', {
+              duration: 6000,
+              panelClass: ['error-snackbar']
+            });
+            this.odooService.handleUnauthorized();
+          } else {
+            this.snackBar.open('❌ Error grave al hacer merge. Revisa los logs del backend.', 'Cerrar', {
+              duration: 6000,
+              panelClass: ['error-snackbar']
+            });
+          }
+        }
+      });
   }
 }

@@ -14,7 +14,7 @@ export class LoginComponent {
   password = '';
   errorMessage = '';
 
-  constructor(private authService: AuthService, private router: Router) {}
+  constructor(private authService: AuthService, private router: Router) { }
 
   onLogin(): void {
     console.log('Intentando iniciar sesión con:', this.username, this.password);
@@ -29,6 +29,6 @@ export class LoginComponent {
     });
   }
   loginWithGitHub(): void {
-  window.location.href = 'http://localhost:8080/auth/login/github';
-}
+    window.location.href = 'http://localhost:8080/auth/login/github';
+  }
 }

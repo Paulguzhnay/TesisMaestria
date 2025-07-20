@@ -43,5 +43,10 @@ getByProject(projectName: string): Observable<OdooInstance[]> {
 getInstancesByProject(projectName: string): Observable<OdooInstance[]> {
   return this.http.get<OdooInstance[]>(`http://localhost:8080/api/odoo/instances/by-project/${projectName}`);
 }
+//-----------------------
+handleUnauthorized(): void {
+  alert('⚠️ Tu sesión de GitHub ha expirado. Redirigiendo para iniciar sesión nuevamente...');
+  window.location.href = 'http://localhost:8080/api/auth/github';
+}
 }
 

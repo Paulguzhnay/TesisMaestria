@@ -15,28 +15,25 @@ interface AuthResponse {
   styleUrl: './github-callback.component.css'
 })
 export class GithubCallbackComponent implements OnInit {
-  constructor(
-    private route: ActivatedRoute,
-    private http: HttpClient,
-    private router: Router
-  ) {}
+
+  constructor(private route: ActivatedRoute, private router: Router) { }
 
   ngOnInit(): void {
-    const code = this.route.snapshot.queryParamMap.get('code');
-    if (code) {
-      this.http.get<AuthResponse>(`http://localhost:8080/auth/github/callback?code=${code}`)
-        .subscribe({
-          next: (res) => {
-            localStorage.setItem('token', res.token);
-            localStorage.setItem('username', res.username);
-            localStorage.setItem('avatarUrl', res.avatarUrl);
-            this.router.navigate(['/dashboard']);
-          },
-          error: (err) => {
-            alert('❌ Error al iniciar sesión con GitHub');
-            this.router.navigate(['/login']);
-          }
-        });
-    }
+    this.route.queryParams.subscribe(params => {
+      const token = params['token'];
+      const username = params['username'];
+      const avatar = params['avatar'];
+
+
+      if (token) {
+        localStorage.setItem('token', token);
+        localStorage.setItem('username', username);
+        localStorage.setItem('avatarUrl', avatar);
+        this.router.navigate(['/dashboard']);
+      } else {
+        alert('❌ Error: No se pudo obtener el token de autenticación');
+        this.router.navigate(['/']);
+      }
+    });
   }
 }

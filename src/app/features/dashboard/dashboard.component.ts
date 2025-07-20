@@ -19,100 +19,109 @@ export class DashboardComponent implements OnInit {
 
   username: string | null = '';
   avatarUrl: string | null = '';
- 
 
-  constructor(private projectService: ProjectService, 
-    private router: Router, 
+
+  constructor(private projectService: ProjectService,
+    private router: Router,
     private dialog: MatDialog,
-    private snackBar: MatSnackBar) {}
+    private snackBar: MatSnackBar) { }
 
-    ngOnInit(): void {
+  ngOnInit(): void {
 
-      this.username = localStorage.getItem('username');
-      this.avatarUrl = localStorage.getItem('avatarUrl');
+    this.username = localStorage.getItem('username');
+    this.avatarUrl = localStorage.getItem('avatarUrl');
 
 
 
-      this.projectService.getByUser().subscribe({
-        next: (projects) => {
-          this.projects = projects;
-        },
-        error: (error) => {
-          console.error('Error cargando proyectos:', error);
-          alert(' Error cargando proyectos');
-        }
-      });
-    }
-
-      goToProject(name: string): void {
-        this.router.navigate([`/projects/${encodeURIComponent(name)}`]);
+    this.projectService.getByUser().subscribe({
+      next: (projects) => {
+        this.projects = projects;
+      },
+      error: (error) => {
+        console.error('Error cargando proyectos:', error);
+        alert(' Error cargando proyectos');
       }
+    });
+  }
 
-        openCreateDialog(): void {
-            const dialogRef = this.dialog.open(ProjectCreateDialogComponent, {
-              width: '400px'
+  goToProject(name: string): void {
+    this.router.navigate([`/projects/${encodeURIComponent(name)}`]);
+  }
+
+  openCreateDialog(): void {
+    const dialogRef = this.dialog.open(ProjectCreateDialogComponent, {
+      width: '400px'
+    });
+
+    dialogRef.afterClosed().subscribe((result: Project | undefined) => {
+      if (result) {
+        this.projectService.create(result).subscribe({
+          next: (created) => {
+            this.snackBar.open('Proyecto creado', 'Cerrar', {
+              duration: 3000,
+              panelClass: 'snackbar-success'
             });
-
-          dialogRef.afterClosed().subscribe((result: Project | undefined) => {
-            if (result) {
-              this.projectService.create(result).subscribe({
-                next: (created) => {
-                  this.snackBar.open('Proyecto creado', 'Cerrar', {
-                    duration: 3000,
-                    panelClass: 'snackbar-success'
-                  });
-                  this.projects.push(created);
-                },
-                error: (err) => {
-                  console.error('Error al crear proyecto', err);
-                  this.snackBar.open('Error al crear proyecto', 'Cerrar', {
-                    duration: 3000,
-                    panelClass: 'snackbar-error'
-                  });
-                }
+            this.projects.push(created);
+          },
+          error: (err) => {
+            if (err.status === 401) {
+              this.snackBar.open('Token expirado. Redirigiendo a GitHub...', 'Cerrar', {
+                duration: 3000,
+                panelClass: 'snackbar-error'
+              });
+              this.projectService.handleUnauthorized();  // Redirige
+            } else {
+              console.error('Error al crear proyecto', err);
+              this.snackBar.open('Error al crear proyecto', 'Cerrar', {
+                duration: 3000,
+                panelClass: 'snackbar-error'
               });
             }
-          });
-        } 
-      deleteProject(project:Project): void {
-        const dialogRef = this.dialog.open(ConfirmDialogComponent, {
-          width: '350px',
-      data: { projectName: project.name }
+          }
         });
+      }
+    });
+  }
 
-        dialogRef.afterClosed().subscribe(result => {
-          if (result) {
-            this.projectService.delete(project.id!).subscribe({
-              next: () => {
-                this.projects = this.projects.filter(p => p.id !== project.id);
-                this.snackBar.open('Proyecto eliminado', 'Cerrar', {
-                  duration: 3000,
-                  panelClass: 'snackbar-success'
-                });
-              },
-              error: (err) => {
-                console.error('Error al eliminar proyecto', err);
-                this.snackBar.open('Error al eliminar proyecto', 'Cerrar', {
-                  duration: 3000,
-                  panelClass: 'snackbar-error'
-                });
-              }
+  deleteProject(project: Project): void {
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      width: '350px',
+      data: { projectName: project.name }
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.projectService.delete(project.id!).subscribe({
+          next: () => {
+            this.projects = this.projects.filter(p => p.id !== project.id);
+            this.snackBar.open('Proyecto eliminado', 'Cerrar', {
+              duration: 3000,
+              panelClass: 'snackbar-success'
+            });
+          },
+          error: (err) => {
+            console.error('Error al eliminar proyecto', err);
+            this.snackBar.open('Error al eliminar proyecto', 'Cerrar', {
+              duration: 3000,
+              panelClass: 'snackbar-error'
             });
           }
         });
       }
+    });
+  }
 
-    abrirProyecto(project: Project): void {
-      this.router.navigate([`/projects/${project.name}`], {
-        queryParams: { id: project.id }
-      });
-    }
+  abrirProyecto(project: Project): void {
+    this.router.navigate([`/projects/${project.name}`], {
+      queryParams: { id: project.id }
+    });
+  }
 
-      // Método de logout
-logout(): void {
-  localStorage.removeItem('token');
-  localStorage.removeItem('username');
-  localStorage.removeItem('avatarUrl');
-  this.router.navigate(['/login']);
-}
+  // Método de logout
+  logout(): void {
+    localStorage.removeItem('token');
+    localStorage.removeItem('username');
+    localStorage.removeItem('avatarUrl');
+    this.router.navigate(['/login']);
+  }
 }

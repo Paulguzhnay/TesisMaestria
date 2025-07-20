@@ -25,10 +25,7 @@
       </ul>
       <div class="card-actions">
         <button class="open-btn" (click)="abrirProyecto(project)">Abrir</button>
-        <button 
-          class="delete-btn" 
-          *ngIf="project.id !== undefined" 
-          (click)="deleteProject(project)">
+        <button class="delete-btn" *ngIf="project.id !== undefined" (click)="deleteProject(project)">
           Eliminar
         </button>
       </div>
