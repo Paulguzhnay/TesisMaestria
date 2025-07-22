@@ -69,6 +69,8 @@ public class DockerService {
 
     private final OdooInstanceRepository odooInstanceRepository;
 
+
+
     public DockerService(OdooInstanceRepository odooInstanceRepository, ProjectRepository projectRepository
 
     ) {
@@ -80,18 +82,26 @@ public class DockerService {
         try {
             System.out.println("🚀 Iniciando método de creación de instancia...");
 
-            // 🔧 Nombres
+            // Nombres y rutas
             String dbContainerName = containerPrefix + category + "_" + instanceName + "_db";
             String odooContainerName = containerPrefix + category + "_" + instanceName;
             String dbVolume = "odoo_" + instanceName + "_db_data";
             String odooVolume = "odoo_" + instanceName + "_data";
+            String repoPath = "C:\\odoo-modules\\" + instanceName;
 
-            System.out.println("dbContainerName " + dbContainerName);
-            System.out.println("odooContainerName " + odooContainerName);
-            System.out.println("dbVolume " + dbVolume);
-            System.out.println("odooVolume " + odooVolume);
+            // Buscar proyecto y usuario
+            Optional<Project> optionalProject = projectRepository.findById(projectId);
+            if (optionalProject.isEmpty()) {
+                return "❌ Error: Proyecto no encontrado con ID: " + projectId;
+            }
+            Project project = optionalProject.get();
+            User user = project.getUser();
 
-            //  Crear contenedor PostgreSQL
+            // Buscar puerto disponible
+            int port = findAvailablePort(8069, 8100);
+            if (port == -1) return "❌ Error: No hay puertos disponibles.";
+
+            // Crear contenedor PostgreSQL
             String dbCommand = String.format(
                     "docker run -d --name %s --network %s " +
                             "-e POSTGRES_USER=%s -e POSTGRES_PASSWORD=%s -e POSTGRES_DB=%s " +
@@ -99,35 +109,28 @@ public class DockerService {
                     dbContainerName, dockerNetwork, postgresUser, postgresPassword, postgresDb,
                     dbVolume, postgresImage
             );
-            System.out.println("dbCommand " + dbCommand);
             if (!executeCommand(new String[]{"cmd.exe", "/c", dbCommand})) {
-                return "❌ Error: No se pudo crear el contenedor de base de datos.";
+                return "❌ Error al crear contenedor PostgreSQL.";
             }
 
             Thread.sleep(4000);
 
-            //  Crear base real
+            // Crear base de datos
             String createDbCmd = String.format("docker exec %s createdb -U %s %s", dbContainerName, postgresUser, instanceName);
-            System.out.println("createDbCmd " + createDbCmd);
             if (!executeCommand(new String[]{"cmd.exe", "/c", createDbCmd})) {
-                return "❌ Error: No se pudo crear la base de datos '" + instanceName + "'.";
+                return "❌ Error al crear la base de datos.";
             }
 
-            // 📂 Crear filestore/sessions en el volumen Odoo
+            // Crear filestore y carpeta de sesiones
             String prepareVolumeCmd = String.format(
                     "docker run --rm -v %s:/data busybox sh -c \"mkdir -p /data/filestore/%s /data/sessions && chmod -R 777 /data\"",
                     odooVolume, instanceName
             );
-            System.out.println("prepareVolumeCmd: " + prepareVolumeCmd);
             if (!executeCommand(new String[]{"cmd.exe", "/c", prepareVolumeCmd})) {
-                return "❌ Error: No se pudo preparar el volumen Odoo.";
+                return "❌ Error al preparar volumen Odoo.";
             }
 
-            //  Buscar puerto
-            int port = findAvailablePort(8069, 8100);
-            if (port == -1) return "❌ Error: No hay puertos disponibles.";
-
-            //  Crear contenedor Odoo
+            // Crear contenedor Odoo (inicial)
             String neutralizeEnv = neutralize ? "-e NEUTRALIZE=true " : "";
             String odooCommand = String.format(
                     "docker run -d --name %s --network %s " +
@@ -139,13 +142,11 @@ public class DockerService {
                     neutralizeEnv,
                     port, odooVolume, odooImage
             );
-            System.out.println("odooCommand " + odooCommand);
             if (!executeCommand(new String[]{"cmd.exe", "/c", odooCommand})) {
                 return "❌ Error: No se pudo crear el contenedor de Odoo.";
             }
 
-            //  Esperar que Odoo pueda conectarse a PostgreSQL
-            System.out.println("⏳ Esperando conexión desde Odoo al contenedor PostgreSQL...");
+            // Verificar conexión a PostgreSQL
             int retries = 10;
             boolean connected = false;
             while (retries-- > 0) {
@@ -153,7 +154,6 @@ public class DockerService {
                         "docker exec %s bash -c \"PGPASSWORD=%s psql -h %s -U %s -d %s -c 'SELECT 1;'\"",
                         odooContainerName, postgresPassword, dbContainerName, postgresUser, instanceName
                 );
-
                 if (executeCommand(new String[]{"cmd.exe", "/c", checkConnection})) {
                     connected = true;
                     break;
@@ -161,49 +161,131 @@ public class DockerService {
                 Thread.sleep(2000);
             }
 
-            if (!connected) {
-                return "❌ Error: Odoo no pudo conectarse a PostgreSQL después de varios intentos.";
-            }
+            if (!connected) return "❌ Error: Odoo no pudo conectarse a PostgreSQL.";
 
-            //  Inicializar base Odoo
+            // Inicializar base
             String demoParam = category.equalsIgnoreCase("DEVELOPMENT") ? "all" : "False";
             String initDbCmd = String.format(
                     "docker exec %s odoo -d %s -i base --db_host=%s --db_user=%s --db_password=%s --without-demo=%s --stop-after-init",
                     odooContainerName, instanceName, dbContainerName, postgresUser, postgresPassword, demoParam
             );
-
-
-            System.out.println("initDbCmd: " + initDbCmd);
             if (!executeCommand(new String[]{"cmd.exe", "/c", initDbCmd})) {
-                return "❌ Error: No se pudo inicializar la base de datos en Odoo.";
+                return "❌ Error al inicializar la base de datos.";
             }
 
-            //  URL de acceso
+            // URL y guardar en base
             String url = "http://localhost:" + port + "/web/login?db=" + instanceName;
-            System.out.println("url " + url);
-
-            //  Guardar instancia
-            Optional<Project> optionalProject = projectRepository.findById(projectId);
-            if (optionalProject.isEmpty()) {
-                return "❌ Error: Proyecto no encontrado con ID: " + projectId;
-            }
-
-            OdooInstance instance = new OdooInstance(instanceName, category, url, neutralize);
-            instance.setProject(optionalProject.get());
+            OdooInstance instance = new OdooInstance(instanceName, category, url, neutralize, port);
+            instance.setProject(project); //  guardar el puerto real
             odooInstanceRepository.save(instance);
 
-            createGitHubBranch(optionalProject.get(), instanceName, category);
-
-
+            createGitHubBranch(project, instanceName, category);
 
             System.out.println("✅ Instancia creada exitosamente en " + url);
             return url;
 
         } catch (Exception e) {
             e.printStackTrace();
-            return "❌ Error inesperado al crear la instancia: " + e.getMessage();
+            return "❌ Error inesperado: " + e.getMessage();
         }
     }
+
+    //----------------------
+    //Metodo para leer los modulos personalizados en Odoo
+    public String installCustomModules(String instanceName, String category, Long projectId) {
+        try {
+            System.out.println("🔧 Iniciando instalación de módulos personalizados...");
+
+            // Buscar proyecto y usuario
+            Optional<Project> optionalProject = projectRepository.findById(projectId);
+            if (optionalProject.isEmpty()) {
+                return "❌ Error: Proyecto no encontrado con ID: " + projectId;
+            }
+            Project project = optionalProject.get();
+            User user = project.getUser();
+
+            // Buscar instancia para obtener puerto actual
+            Optional<OdooInstance> optionalInstance = odooInstanceRepository.findByNameAndCategoryAndProjectId(instanceName, category, projectId);
+            if (optionalInstance.isEmpty()) {
+                return "❌ Error: Instancia no encontrada.";
+            }
+            OdooInstance instance = optionalInstance.get();
+            int port = instance.getPort();
+
+            // Definir rutas y nombres
+            String branchName = category.toLowerCase() + "-" + instanceName.replaceAll("\\s+", "-");
+            String repoUrl = "https://github.com/" + user.getUsername() + "/" + project.getName() + ".git";
+            String repoPath = "C:\\odoo-modules\\" + instanceName;
+            String customAddonsPath = repoPath + "\\custom_addons";
+            String odooContainerName = containerPrefix + category + "_" + instanceName;
+            String dbContainerName = containerPrefix + category + "_" + instanceName + "_db";
+
+            // Clonar repositorio si no existe
+            File customAddons = new File(customAddonsPath);
+            if (!customAddons.exists()) {
+                String gitCloneCmd = String.format("git clone -b %s %s \"%s\"", branchName, repoUrl, repoPath);
+                System.out.println("gitCloneCmd: " + gitCloneCmd);
+                if (!executeCommand(new String[]{"cmd.exe", "/c", gitCloneCmd})) {
+                    return "❌ Error al clonar el repositorio.";
+                }
+            }
+
+            // Verificar existencia de carpeta custom_addons
+            if (!customAddons.exists() || !customAddons.isDirectory()) {
+                return "ℹ️ No se encontró la carpeta custom_addons en la rama.";
+            }
+
+            // Obtener módulos
+            String[] modules = customAddons.list((dir, name) -> new File(dir, name).isDirectory());
+            if (modules == null || modules.length == 0) {
+                return "ℹ️ No se encontraron módulos personalizados para instalar.";
+            }
+            String modulesList = String.join(",", modules);
+            System.out.println("🧩 Módulos detectados: " + modulesList);
+
+            // Parar y eliminar contenedor actual
+            executeCommand(new String[]{"cmd.exe", "/c", "docker stop " + odooContainerName});
+            executeCommand(new String[]{"cmd.exe", "/c", "docker rm " + odooContainerName});
+
+            // Volúmenes
+            String odooVolume = "odoo_" + instanceName + "_data";
+            String odooCustomVolume = String.format("-v \"%s:/mnt/extra-addons\"", customAddons.getAbsolutePath());
+
+            // Crear nuevo contenedor con ruta extra de addons
+            String odooCommand = String.format(
+                    "docker run -d --name %s --network %s " +
+                            "-e HOST=%s -e USER=%s -e PASSWORD=%s -e DB=%s " +
+                            "-p %d:8069 -v %s:/var/lib/odoo %s %s",
+                    odooContainerName, dockerNetwork,
+                    dbContainerName, postgresUser, postgresPassword, instanceName,
+                    port, odooVolume, odooCustomVolume, odooImage
+            );
+            System.out.println("odooCommand: " + odooCommand);
+            if (!executeCommand(new String[]{"cmd.exe", "/c", odooCommand})) {
+                return "❌ Error: No se pudo recrear el contenedor Odoo.";
+            }
+
+            // Instalar módulos
+            String installCmd = String.format(
+                    "docker exec %s odoo -d %s -i %s --db_host=%s --db_user=%s --db_password=%s --stop-after-init",
+                    odooContainerName, instanceName, modulesList, dbContainerName, postgresUser, postgresPassword
+            );
+            System.out.println("🔧 Ejecutando instalación: " + installCmd);
+            if (!executeCommand(new String[]{"cmd.exe", "/c", installCmd})) {
+                return "⚠️ Módulos no se instalaron correctamente.";
+            }
+
+            return "✅ Módulos personalizados instalados correctamente.";
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "❌ Error inesperado al instalar módulos: " + e.getMessage();
+        }
+    }
+
+
+
+    //------------------------
 
     //Metodo para crear una rama en github
     private void createGitHubBranch(Project project, String instanceName, String category) {
@@ -230,7 +312,13 @@ public class DockerService {
         } catch (Exception e) {
             System.err.println("❌ Error al crear la rama en GitHub: " + e.getMessage());
         }
+
+
     }
+
+
+
+
     // Método auxiliar para buscar un puerto libre
     private int findAvailablePort(int startPort, int endPort) {
         for (int port = startPort; port <= endPort; port++) {

@@ -57,6 +57,13 @@ public class OdooController {
         return response;
     }
 
+    @PostMapping("/install-modules")
+    public ResponseEntity<String> installModules(@RequestParam String name,
+                                                 @RequestParam String category,
+                                                 @RequestParam Long projectId) {
+        String result = dockerService.installCustomModules(name, category, projectId);
+        return ResponseEntity.ok(result);
+    }
 
     static class InstanceRequest {
         private String name;

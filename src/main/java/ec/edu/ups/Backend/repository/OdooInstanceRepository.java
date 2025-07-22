@@ -19,4 +19,6 @@ public interface OdooInstanceRepository extends JpaRepository<OdooInstance, Long
     void deleteByNameAndCategory(String name, String category);
 
     Optional<OdooInstance> findAllByNameAndCategory(String name, String category);
+    Optional<OdooInstance> findByNameAndCategoryAndProjectId(String name, String category, Long projectId);
+
 }

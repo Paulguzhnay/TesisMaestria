@@ -14,9 +14,14 @@ public class OdooInstance {
     private String name;
     private String category;
     private String url;
+    @Column(nullable = false)
+    private Integer port;
 
     @Column(name = "neutralize")
     private Boolean neutralize;
+
+
+
 
     @ManyToOne
     @JoinColumn(name = "project_id")
@@ -46,11 +51,21 @@ public class OdooInstance {
     public void setProject(Project project) { this.project = project; }
     public void setNeutralize(Boolean neutralize) {this.neutralize = neutralize;}
 
-    public OdooInstance(String name, String category, String url, Boolean neutralize) {
+    public int getPort() {
+        return port;
+    }
+
+    public void setPort(int port) {
+        this.port = port;
+    }
+
+
+    public OdooInstance(String name, String category, String url, boolean neutralize, Integer port) {
         this.name = name;
         this.category = category;
         this.url = url;
         this.neutralize = neutralize;
+        this.port = port;
     }
 
 
