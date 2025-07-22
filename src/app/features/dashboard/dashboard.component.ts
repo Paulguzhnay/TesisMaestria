@@ -25,6 +25,7 @@ export class DashboardComponent implements OnInit {
     private router: Router,
     private dialog: MatDialog,
     private snackBar: MatSnackBar) { }
+  isLoading = false;
 
   ngOnInit(): void {
 
@@ -69,9 +70,13 @@ export class DashboardComponent implements OnInit {
                 duration: 3000,
                 panelClass: 'snackbar-error'
               });
-              this.projectService.handleUnauthorized();  // Redirige
+              this.projectService.handleUnauthorized();
+            } else if (err.status === 409) {
+              this.snackBar.open('❌ El repositorio ya existe en GitHub', 'Cerrar', {
+                duration: 4000,
+                panelClass: 'snackbar-error'
+              });
             } else {
-              console.error('Error al crear proyecto', err);
               this.snackBar.open('Error al crear proyecto', 'Cerrar', {
                 duration: 3000,
                 panelClass: 'snackbar-error'

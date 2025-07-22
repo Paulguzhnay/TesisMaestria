@@ -1,12 +1,20 @@
+<!-- Spinner superior (barra de progreso lineal) -->
+<mat-progress-bar *ngIf="isProcessing" mode="indeterminate" color="accent">
+</mat-progress-bar>
+
 <div class="sidebar">
   <!-- Categoría: PRODUCTION -->
   <div class="category">
     <span>PRODUCTION</span>
     <div *ngFor="let branch of productionBranches" class="branch">
       <a [href]="branch.url" target="_blank">{{ branch.name }}</a>
+      <button mat-icon-button color="primary" matTooltip="Instalar módulos personalizados"
+        (click)="installCustomModules(branch)" [disabled]="isProcessing">
+        <mat-icon>extension</mat-icon>
+      </button>
     </div>
     <button mat-raised-button color="accent" (click)="openCreateDialog('PRODUCTION')"
-            [disabled]="productionBranches.length >= 1">
+      [disabled]="productionBranches.length >= 1 || isProcessing">
       + Crear
     </button>
   </div>
@@ -16,8 +24,13 @@
     <span>STAGING</span>
     <div *ngFor="let branch of stagingBranches" class="branch">
       <a [href]="branch.url" target="_blank">{{ branch.name }}</a>
+      <button mat-icon-button color="primary" matTooltip="Instalar módulos personalizados"
+        (click)="installCustomModules(branch)" [disabled]="isProcessing">
+        <mat-icon>extension</mat-icon>
+      </button>
     </div>
-    <button mat-raised-button color="accent" (click)="openCreateDialog('STAGING')">+ Crear</button>
+    <button mat-raised-button color="accent" (click)="openCreateDialog('STAGING')" [disabled]="isProcessing">+
+      Crear</button>
   </div>
 
   <!-- Categoría: DEVELOPMENT -->
@@ -25,19 +38,24 @@
     <span>DEVELOPMENT</span>
     <div *ngFor="let branch of developmentBranches" class="branch">
       <a [href]="branch.url" target="_blank">{{ branch.name }}</a>
+      <button mat-icon-button color="primary" matTooltip="Instalar módulos personalizados"
+        (click)="installCustomModules(branch)" [disabled]="isProcessing">
+        <mat-icon>extension</mat-icon>
+      </button>
     </div>
-    <button mat-raised-button color="accent" (click)="openCreateDialog('DEVELOPMENT')">+ Crear</button>
+    <button mat-raised-button color="accent" (click)="openCreateDialog('DEVELOPMENT')" [disabled]="isProcessing">+
+      Crear</button>
   </div>
 
   <hr>
 
   <!-- Sección de Merge -->
   <div class="merge-section">
-    <h3> Merge de Instancias</h3>
+    <h3>Merge de Instancias</h3>
 
     <mat-form-field appearance="fill" style="width: 100%; margin-bottom: 10px;">
       <mat-label>Origen (Branch a copiar)</mat-label>
-      <mat-select [(value)]="selectedSource">
+      <mat-select [(value)]="selectedSource" [disabled]="isProcessing">
         <mat-option *ngFor="let instance of allInstances" [value]="instance">
           {{ instance.name }} ({{ instance.category }})
         </mat-option>
@@ -46,7 +64,7 @@
 
     <mat-form-field appearance="fill" style="width: 100%; margin-bottom: 20px;">
       <mat-label>Destino (Branch a actualizar)</mat-label>
-      <mat-select [(value)]="selectedTarget">
+      <mat-select [(value)]="selectedTarget" [disabled]="isProcessing">
         <mat-option *ngFor="let instance of allInstances" [value]="instance">
           {{ instance.name }} ({{ instance.category }})
         </mat-option>
@@ -54,8 +72,12 @@
     </mat-form-field>
 
     <button mat-raised-button color="accent" (click)="mergeBranches()"
-            [disabled]="!selectedSource || !selectedTarget">
-       Merge Instancias
+      [disabled]="!selectedSource || !selectedTarget || isProcessing">
+      Merge Instancias
     </button>
+  </div>
+  <!-- Spinner central en overlay -->
+  <div class="overlay-spinner" *ngIf="isProcessing">
+    <mat-spinner diameter="60" color="accent"></mat-spinner>
   </div>
 </div>

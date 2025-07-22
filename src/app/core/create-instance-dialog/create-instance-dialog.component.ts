@@ -11,6 +11,7 @@ export interface CreateInstanceData {
   category: string;
 
 
+
 }
 
 @Component({
@@ -23,6 +24,7 @@ export class CreateInstanceDialogComponent implements OnInit {
   form!: FormGroup;
   categories = ['DEVELOPMENT', 'STAGING', 'PRODUCTION'];
   categoryValue: string = "";
+  isProcessing = false;
 
   constructor(
     private fb: FormBuilder,
@@ -48,14 +50,19 @@ export class CreateInstanceDialogComponent implements OnInit {
     if (this.form.invalid) return;
 
     const { name, category, neutralize } = this.form.value;
+    this.isProcessing = true; // <-- activar spinner
 
     this.odoo.createOdooInstance(name, category, this.data.projectId, neutralize).subscribe({
       next: inst => this.dialogRef.close(inst),
-      error: err => this.form.setErrors({ server: err.error?.message })
+      error: err => {
+        this.isProcessing = false;
+        this.form.setErrors({ server: err.error?.message });
+      }
     });
   }
 
   cancel(): void {
     this.dialogRef.close();
   }
+
 }

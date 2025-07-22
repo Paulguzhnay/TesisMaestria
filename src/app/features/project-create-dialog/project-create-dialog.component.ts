@@ -8,21 +8,24 @@ import { Project } from '../../models/project.model';
   styleUrl: './project-create-dialog.component.css'
 })
 export class ProjectCreateDialogComponent {
-    project: Project = {
+  project: Project = {
     name: '',
     version: '17.0'
   };
+  isSaving = false;
+
 
 
   constructor(
     public dialogRef: MatDialogRef<ProjectCreateDialogComponent>
-  ) {}
+  ) { }
 
   save(): void {
     if (this.project.name?.trim()) {
-      this.dialogRef.close(this.project);
+      this.isSaving = true;
+      this.dialogRef.close(this.project); // el guardado real ocurre en DashboardComponent
     } else {
-      alert(' El nombre del proyecto es requerido');
+      alert('El nombre del proyecto es requerido');
     }
   }
 

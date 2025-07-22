@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams} from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { OdooInstance } from '../models/odoo-instance.model';
 
@@ -47,6 +47,18 @@ getInstancesByProject(projectName: string): Observable<OdooInstance[]> {
 handleUnauthorized(): void {
   alert('⚠️ Tu sesión de GitHub ha expirado. Redirigiendo para iniciar sesión nuevamente...');
   window.location.href = 'http://localhost:8080/api/auth/github';
+}
+//-----------------------
+installModules(name: string, category: string, projectId: number): Observable<string> {
+  const params = new HttpParams()
+    .set('name', name)
+    .set('category', category)
+    .set('projectId', projectId.toString());
+
+  return this.http.post(`${this.apiUrl}/install-modules`, null, {
+    params,
+    responseType: 'text'
+  });
 }
 }
 

@@ -3,6 +3,8 @@ import { OdooService } from '../../services/odoo.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
+import { MatIcon } from '@angular/material/icon';
+import { OdooInstance } from '../../models/odoo-instance.model';
 import {
   CreateInstanceData,
   CreateInstanceDialogComponent
@@ -24,7 +26,7 @@ export class SidebarComponent implements OnInit {
 
   selectedSource: any = null;
   selectedTarget: any = null;
-
+  isProcessing = false;
 
   constructor(
     private odooService: OdooService,
@@ -33,7 +35,6 @@ export class SidebarComponent implements OnInit {
     private snackBar: MatSnackBar,
     private dialog: MatDialog
   ) {
-
     this.router.events.subscribe(() => {
       const current = this.router.url;
       const urlTree = this.router.parseUrl(current);
@@ -73,8 +74,6 @@ export class SidebarComponent implements OnInit {
           if (idFromQuery) {
             this.projectId = +idFromQuery;
             console.log("IID del proyecto detectado:", this.projectId);
-
-            //Ahora sí, ambos están listos
             console.log("Cargando instancias para el proyecto:", this.projectName);
             this.loadInstancesByProject(this.projectName);
           }
@@ -112,24 +111,25 @@ export class SidebarComponent implements OnInit {
     });
   }
 
-
   openCreateDialog(category: string): void {
+    this.isProcessing = true;
     const ref = this.dialog.open<CreateInstanceDialogComponent, CreateInstanceData>(
       CreateInstanceDialogComponent, {
-      width: '400px',
-      data: {
-        projectId: this.projectId,
-        projectName: this.projectName,
-        category: category  // ⚠️ nuevo
+        width: '400px',
+        data: {
+          projectId: this.projectId,
+          projectName: this.projectName,
+          category: category
+        }
       }
-    }
     );
 
     ref.afterClosed().subscribe(instance => {
       if (instance) {
-        this.snackBar.open(`Instancia "${instance.name}" creada correctamente`, 'Cerrar', { duration: 3000 });
+        this.snackBar.open(`Instancia  creada correctamente`, 'Cerrar', { duration: 3000 });
         this.loadInstancesByProject(this.projectName);
       }
+      this.isProcessing = false;
     });
   }
 
@@ -156,8 +156,6 @@ export class SidebarComponent implements OnInit {
       }
     });
   }
-
-
 
   mergeBranches(): void {
     if (!this.selectedSource || !this.selectedTarget) {
@@ -214,5 +212,21 @@ export class SidebarComponent implements OnInit {
           }
         }
       });
+  }
+
+  installCustomModules(instance: OdooInstance): void {
+    this.isProcessing = true;
+    if (!instance || !this.projectId) return;
+
+    this.odooService.installModules(instance.name, instance.category, this.projectId).subscribe({
+      next: (msg) => {
+        this.snackBar.open(msg, 'Cerrar', { duration: 4000 });
+      },
+      error: (err) => {
+        console.error(err);
+        this.snackBar.open('Error al instalar módulos', 'Cerrar', { duration: 4000 });
+      },
+      complete: () => this.isProcessing = false
+    });
   }
 }

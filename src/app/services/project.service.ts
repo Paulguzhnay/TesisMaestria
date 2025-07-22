@@ -34,7 +34,7 @@ getByUser(): Observable<Project[]> {
 
 handleUnauthorized(): void {
   alert('⚠️ Tu sesión de GitHub ha expirado. Redirigiendo para iniciar sesión nuevamente...');
-  window.location.href = 'http://localhost:8080/api/auth/github';
+  window.location.href = 'http://localhost:4200/login';
 }
 
 }

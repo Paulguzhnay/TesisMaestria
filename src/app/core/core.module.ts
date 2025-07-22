@@ -12,10 +12,12 @@ import { MatButtonModule }    from '@angular/material/button';
 import { MatDialogModule }    from '@angular/material/dialog';
 import { MatSnackBarModule }  from '@angular/material/snack-bar';
 import { MatCheckboxModule } from '@angular/material/checkbox';
-
+import { MatIconModule } from '@angular/material/icon';
+import { MatProgressBar } from '@angular/material/progress-bar';
 import { HeaderComponent } from './header/header.component';
 import { SidebarComponent } from './sidebar/sidebar.component';
 import { FooterComponent } from './footer/footer.component';
+import { MatSpinner } from '@angular/material/progress-spinner';
 import { CreateInstanceDialogComponent } from './create-instance-dialog/create-instance-dialog.component';
 
 @NgModule({
@@ -38,7 +40,10 @@ import { CreateInstanceDialogComponent } from './create-instance-dialog/create-i
     MatButtonModule,
     MatDialogModule,
     MatSnackBarModule,
-    MatCheckboxModule
+    MatCheckboxModule,
+    MatIconModule,
+    MatProgressBar,
+    MatSpinner
   ],
   exports: [
     HeaderComponent,

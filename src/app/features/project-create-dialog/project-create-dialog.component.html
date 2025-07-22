@@ -13,6 +13,9 @@
 
   <div class="actions">
     <button mat-button (click)="cancel()">Cancelar</button>
-    <button mat-flat-button color="primary" (click)="save()">Crear</button>
+    <button mat-flat-button color="primary" (click)="save()" [disabled]="isSaving">
+      <mat-spinner *ngIf="isSaving" [diameter]="20" style="margin-right: 8px;"></mat-spinner>
+      {{ isSaving ? 'Creando...' : 'Crear' }}
+    </button>
   </div>
 </form>

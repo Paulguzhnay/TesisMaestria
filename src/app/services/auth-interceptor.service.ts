@@ -21,7 +21,7 @@ export class AuthInterceptor implements HttpInterceptor {
       catchError((error: HttpErrorResponse) => {
         if (error.status === 401) {
           console.warn('⚠️ Token de GitHub expirado. Redirigiendo a autenticación...');
-          window.location.href = 'http://localhost:8080/api/auth/github';
+          window.location.href = 'http://localhost:4200/login';
         }
         return throwError(() => error);
       })
