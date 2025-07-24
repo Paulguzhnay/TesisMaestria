@@ -82,22 +82,27 @@ public class DockerService {
         try {
             System.out.println("🚀 Iniciando método de creación de instancia...");
 
-            // Nombres y rutas
+            // Buscar proyecto
+            Optional<Project> optionalProject = projectRepository.findById(projectId);
+            if (optionalProject.isEmpty()) return "❌ Error: Proyecto no encontrado con ID: " + projectId;
+            Project project = optionalProject.get();
+
+            // Si es STAGING y existe PRODUCTION, hacer merge
+            if (category.equalsIgnoreCase("STAGING")) {
+                Optional<OdooInstance> prodInstanceOpt = odooInstanceRepository.findByCategoryAndProjectId("PRODUCTION", projectId);
+                if (prodInstanceOpt.isPresent()) {
+                    System.out.println("🔁 Clonando desde instancia PRODUCTION...");
+                    return mergeOdooInstances(projectId, prodInstanceOpt.get().getName(), instanceName);
+                }
+            }
+
+            // Parámetros generales
             String dbContainerName = containerPrefix + category + "_" + instanceName + "_db";
             String odooContainerName = containerPrefix + category + "_" + instanceName;
             String dbVolume = "odoo_" + instanceName + "_db_data";
             String odooVolume = "odoo_" + instanceName + "_data";
             String repoPath = "C:\\odoo-modules\\" + instanceName;
 
-            // Buscar proyecto y usuario
-            Optional<Project> optionalProject = projectRepository.findById(projectId);
-            if (optionalProject.isEmpty()) {
-                return "❌ Error: Proyecto no encontrado con ID: " + projectId;
-            }
-            Project project = optionalProject.get();
-            User user = project.getUser();
-
-            // Buscar puerto disponible
             int port = findAvailablePort(8069, 8100);
             if (port == -1) return "❌ Error: No hay puertos disponibles.";
 
@@ -109,28 +114,21 @@ public class DockerService {
                     dbContainerName, dockerNetwork, postgresUser, postgresPassword, postgresDb,
                     dbVolume, postgresImage
             );
-            if (!executeCommand(new String[]{"cmd.exe", "/c", dbCommand})) {
-                return "❌ Error al crear contenedor PostgreSQL.";
-            }
-
+            if (!executeCommand(new String[]{"cmd.exe", "/c", dbCommand})) return "❌ Error al crear contenedor PostgreSQL.";
             Thread.sleep(4000);
 
             // Crear base de datos
             String createDbCmd = String.format("docker exec %s createdb -U %s %s", dbContainerName, postgresUser, instanceName);
-            if (!executeCommand(new String[]{"cmd.exe", "/c", createDbCmd})) {
-                return "❌ Error al crear la base de datos.";
-            }
+            if (!executeCommand(new String[]{"cmd.exe", "/c", createDbCmd})) return "❌ Error al crear la base de datos.";
 
-            // Crear filestore y carpeta de sesiones
+            // Crear volumen de Odoo (filestore y sesiones)
             String prepareVolumeCmd = String.format(
                     "docker run --rm -v %s:/data busybox sh -c \"mkdir -p /data/filestore/%s /data/sessions && chmod -R 777 /data\"",
                     odooVolume, instanceName
             );
-            if (!executeCommand(new String[]{"cmd.exe", "/c", prepareVolumeCmd})) {
-                return "❌ Error al preparar volumen Odoo.";
-            }
+            if (!executeCommand(new String[]{"cmd.exe", "/c", prepareVolumeCmd})) return "❌ Error al preparar volumen Odoo.";
 
-            // Crear contenedor Odoo (inicial)
+            // Crear contenedor Odoo
             String neutralizeEnv = neutralize ? "-e NEUTRALIZE=true " : "";
             String odooCommand = String.format(
                     "docker run -d --name %s --network %s " +
@@ -142,11 +140,9 @@ public class DockerService {
                     neutralizeEnv,
                     port, odooVolume, odooImage
             );
-            if (!executeCommand(new String[]{"cmd.exe", "/c", odooCommand})) {
-                return "❌ Error: No se pudo crear el contenedor de Odoo.";
-            }
+            if (!executeCommand(new String[]{"cmd.exe", "/c", odooCommand})) return "❌ Error: No se pudo crear el contenedor de Odoo.";
 
-            // Verificar conexión a PostgreSQL
+            // Verificar conexión a la base de datos
             int retries = 10;
             boolean connected = false;
             while (retries-- > 0) {
@@ -160,10 +156,9 @@ public class DockerService {
                 }
                 Thread.sleep(2000);
             }
-
             if (!connected) return "❌ Error: Odoo no pudo conectarse a PostgreSQL.";
 
-            // Inicializar base
+            // Inicializar base de datos
             String demoParam = category.equalsIgnoreCase("DEVELOPMENT") ? "all" : "False";
             String initDbCmd = String.format(
                     "docker exec %s odoo -d %s -i base --db_host=%s --db_user=%s --db_password=%s --without-demo=%s --stop-after-init",
@@ -173,12 +168,13 @@ public class DockerService {
                 return "❌ Error al inicializar la base de datos.";
             }
 
-            // URL y guardar en base
+            // Guardar en la base
             String url = "http://localhost:" + port + "/web/login?db=" + instanceName;
             OdooInstance instance = new OdooInstance(instanceName, category, url, neutralize, port);
-            instance.setProject(project); //  guardar el puerto real
+            instance.setProject(project);
             odooInstanceRepository.save(instance);
 
+            // Crear rama GitHub
             createGitHubBranch(project, instanceName, category);
 
             System.out.println("✅ Instancia creada exitosamente en " + url);
@@ -189,6 +185,8 @@ public class DockerService {
             return "❌ Error inesperado: " + e.getMessage();
         }
     }
+
+
 
     //----------------------
     //Metodo para leer los modulos personalizados en Odoo
@@ -798,7 +796,8 @@ public class DockerService {
                 return "❌ Falló la restauración del filestore.";
             }
 
-            runCmd("docker rm temp_restore");
+            runCmd("docker rm -f temp_restore");
+
 
             // 4. Crear carpeta de sesiones directamente en el volumen
             runCmd(String.format(
@@ -828,6 +827,7 @@ public class DockerService {
             return "❌ Error inesperado durante el merge: " + e.getMessage();
         }
     }
+
 
     private boolean runCmd(String command) throws IOException {
         try {
@@ -1018,7 +1018,7 @@ public class DockerService {
         }
     }
 
-//SHEL DB
+    //SHEL DB
     public String executeSqlCommandInInstance(String command, String instanceName, String category) {
     String containerName = String.format("odoo_instance_%s_%s_db", category.toUpperCase(), instanceName);
 
