@@ -1,6 +1,7 @@
 <h2>Importar Base de Datos / Filestore</h2>
 
-<form (ngSubmit)="importDatabase()" #form="ngForm">
+<form (ngSubmit)="importDatabase(fileInput, form)" #form="ngForm">
+
   <!-- Instancia seleccionada -->
   <div style="margin-bottom: 16px;">
     <strong>Instancia Seleccionada:</strong>
@@ -9,11 +10,20 @@
   </div>
 
   <!-- Selector de archivos -->
-  <input type="file" multiple (change)="onFilesSelected($event)" accept=".dump,.tar.gz" />
+  <input #fileInput type="file" multiple (change)="onFilesSelected($event)" accept=".dump,.tar.gz" />
 
   <!-- Botón para importar -->
   <button mat-raised-button color="primary" type="submit"
-          [disabled]="!selectedDbFile || !selectedInstance">
-    Importar
+    [disabled]="!selectedDbFile || !selectedInstance || isImporting">
+    <ng-container *ngIf="!isImporting; else loadingTpl">
+      Importar
+    </ng-container>
+    <ng-template #loadingTpl>
+      <mat-spinner diameter="20" color="accent" strokeWidth="3" style="margin-right: 8px;"></mat-spinner>
+      Procesando...
+    </ng-template>
   </button>
 </form>
+<div class="overlay-spinner" *ngIf="isImporting">
+  <mat-spinner diameter="60" color="accent"></mat-spinner>
+</div>

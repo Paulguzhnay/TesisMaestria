@@ -34,15 +34,28 @@ export class DashboardComponent implements OnInit {
 
 
 
-    this.projectService.getByUser().subscribe({
-      next: (projects) => {
-        this.projects = projects;
-      },
-      error: (error) => {
-        console.error('Error cargando proyectos:', error);
-        alert(' Error cargando proyectos');
-      }
-    });
+this.projectService.getByUser().subscribe({
+  next: (projects) => {
+    this.projects = projects;
+  },
+  error: (error) => {
+    console.error('Error cargando proyectos:', error);
+
+    if (error.status === 401) {
+      this.snackBar.open('⚠️ Tu sesión de GitHub ha expirado. Redirigiendo para iniciar sesión...', 'Cerrar', {
+        duration: 4000,
+        panelClass: 'snackbar-error'
+      });
+
+      this.projectService.handleUnauthorized(); // ⬅️ Redirige correctamente
+    } else {
+      this.snackBar.open('❌ Error cargando proyectos', 'Cerrar', {
+        duration: 3000,
+        panelClass: 'snackbar-error'
+      });
+    }
+  }
+});
   }
 
   goToProject(name: string): void {

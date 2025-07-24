@@ -115,13 +115,13 @@ export class SidebarComponent implements OnInit {
     this.isProcessing = true;
     const ref = this.dialog.open<CreateInstanceDialogComponent, CreateInstanceData>(
       CreateInstanceDialogComponent, {
-        width: '400px',
-        data: {
-          projectId: this.projectId,
-          projectName: this.projectName,
-          category: category
-        }
+      width: '400px',
+      data: {
+        projectId: this.projectId,
+        projectName: this.projectName,
+        category: category
       }
+    }
     );
 
     ref.afterClosed().subscribe(instance => {
@@ -170,6 +170,9 @@ export class SidebarComponent implements OnInit {
 
     const confirmacion = confirm(`¿Seguro que quieres hacer merge de ${this.selectedSource.name} ➡️ ${this.selectedTarget.name}?`);
     if (!confirmacion) return;
+
+    this.isProcessing = true; // ⬅️ Activamos loading aquí
+
     console.log(" Enviando payload de merge:", {
       source: this.selectedSource.name,
       target: this.selectedTarget.name,
@@ -184,13 +187,13 @@ export class SidebarComponent implements OnInit {
           console.log('Respuesta del merge:', response);
 
           if (response.includes('✅')) {
-            this.snackBar.open(`✅ Merge exitoso: ${response}`, 'Cerrar', { duration: 6000, panelClass: ['success-snackbar'] });
+            this.snackBar.open(` Merge exitoso: ${response}`, 'Cerrar', { duration: 6000, panelClass: ['success-snackbar'] });
           } else if (response.includes('⚠️')) {
-            this.snackBar.open(`⚠️ Merge con advertencias: ${response}`, 'Cerrar', { duration: 6000, panelClass: ['warning-snackbar'] });
+            this.snackBar.open(` Merge con advertencias: ${response}`, 'Cerrar', { duration: 6000, panelClass: ['warning-snackbar'] });
           } else if (response.includes('❌')) {
-            this.snackBar.open(`❌ Error en el merge: ${response}`, 'Cerrar', { duration: 6000, panelClass: ['error-snackbar'] });
+            this.snackBar.open(` Error en el merge: ${response}`, 'Cerrar', { duration: 6000, panelClass: ['error-snackbar'] });
           } else {
-            this.snackBar.open(`ℹ️ Resultado del merge: ${response}`, 'Cerrar', { duration: 6000 });
+            this.snackBar.open(` Resultado del merge: ${response}`, 'Cerrar', { duration: 6000 });
           }
 
           this.loadInstances();
@@ -210,9 +213,13 @@ export class SidebarComponent implements OnInit {
               panelClass: ['error-snackbar']
             });
           }
+        },
+        complete: () => {
+          this.isProcessing = false; // ⬅ Finaliza loading cuando el observable termina
         }
       });
   }
+
 
   installCustomModules(instance: OdooInstance): void {
     this.isProcessing = true;

@@ -20,9 +20,7 @@
   <div class="project-grid">
     <div class="project-card" *ngFor="let project of projects">
       <h3>{{ project.name }}</h3>
-      <ul>
-        <li><strong>Versión:</strong> {{ project.version }}</li>
-      </ul>
+
       <div class="card-actions">
         <button class="open-btn" (click)="abrirProyecto(project)">Abrir</button>
         <button class="delete-btn" *ngIf="project.id !== undefined" (click)="deleteProject(project)">

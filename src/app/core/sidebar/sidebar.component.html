@@ -1,6 +1,5 @@
 <!-- Spinner superior (barra de progreso lineal) -->
-<mat-progress-bar *ngIf="isProcessing" mode="indeterminate" color="accent">
-</mat-progress-bar>
+<mat-progress-bar *ngIf="isProcessing" mode="indeterminate" color="accent"></mat-progress-bar>
 
 <div class="sidebar">
   <!-- Categoría: PRODUCTION -->
@@ -29,8 +28,9 @@
         <mat-icon>extension</mat-icon>
       </button>
     </div>
-    <button mat-raised-button color="accent" (click)="openCreateDialog('STAGING')" [disabled]="isProcessing">+
-      Crear</button>
+    <button mat-raised-button color="accent" (click)="openCreateDialog('STAGING')" [disabled]="isProcessing">
+      + Crear
+    </button>
   </div>
 
   <!-- Categoría: DEVELOPMENT -->
@@ -43,8 +43,9 @@
         <mat-icon>extension</mat-icon>
       </button>
     </div>
-    <button mat-raised-button color="accent" (click)="openCreateDialog('DEVELOPMENT')" [disabled]="isProcessing">+
-      Crear</button>
+    <button mat-raised-button color="accent" (click)="openCreateDialog('DEVELOPMENT')" [disabled]="isProcessing">
+      + Crear
+    </button>
   </div>
 
   <hr>
@@ -73,9 +74,16 @@
 
     <button mat-raised-button color="accent" (click)="mergeBranches()"
       [disabled]="!selectedSource || !selectedTarget || isProcessing">
-      Merge Instancias
+      <ng-container *ngIf="!isProcessing; else loadingMerge">
+        Merge Instancias
+      </ng-container>
+      <ng-template #loadingMerge>
+        <mat-spinner diameter="20" color="primary" style="margin-right: 8px;" strokeWidth="3"></mat-spinner>
+        Procesando...
+      </ng-template>
     </button>
   </div>
+
   <!-- Spinner central en overlay -->
   <div class="overlay-spinner" *ngIf="isProcessing">
     <mat-spinner diameter="60" color="accent"></mat-spinner>
