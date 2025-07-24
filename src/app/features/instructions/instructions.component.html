@@ -1,0 +1,84 @@
+<h2>Guía para configurar NGINX en Windows con subdominios personalizados</h2>
+
+<ol>
+  <li>
+    <strong>Ubica tu archivo <code>nginx.conf</code></strong><br />
+    Debe estar junto a tu archivo <code>docker-compose.yml</code>. Contendrá algo como:
+    <pre><code>http &#123;
+    include       mime.types;
+    default_type  application/octet-stream;
+    sendfile        on;
+    keepalive_timeout  65;
+
+    server &#123;
+        listen       80;
+        server_name  localhost;
+
+        set $subdomain "";
+        if ($host ~* ^(?&lt;sub&gt;.+?)\.(dev|staging|prod)\.miapp\.com$) &#123;
+            set $subdomain $sub;
+            set $env $2;
+        &#125;
+
+        location / &#123;
+            proxy_pass http://odoo_&#36;subdomain_&#36;env:8069;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        &#125;
+    &#125;
+&#125;</code></pre>
+  </li>
+
+  <li>
+    <strong>Configura <code>docker-compose.yml</code></strong><br />
+    Asegúrate de tener algo como esto:
+    <pre><code>version: '3.8'
+
+services:
+  nginx-proxy:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nginx-proxy-odoo
+    ports:
+      - "80:80"
+    networks:
+      - odoo_network
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    restart: always
+
+networks:
+  odoo_network:
+    external: true</code></pre>
+  </li>
+
+  <li>
+    <strong>Agrega las entradas al archivo <code>hosts</code></strong> en Windows<br />
+    Edita <code>C:\Windows\System32\drivers\etc\hosts</code> como administrador. Añade:
+    <pre><code>127.0.0.1 test.dev.miapp.com
+127.0.0.1 staging.miapp.com
+127.0.0.1 prod.miapp.com</code></pre>
+  </li>
+
+  <li>
+    <strong>Ejecuta el contenedor NGINX</strong><br />
+    En PowerShell:
+    <pre><code>docker compose up -d</code></pre>
+  </li>
+
+  <li>
+    <strong>Asegúrate de que tus contenedores Odoo estén conectados a <code>odoo_network</code></strong><br />
+    Puedes forzar la conexión si hace falta:
+    <pre><code>docker network connect odoo_network odoo_test_dev</code></pre>
+  </li>
+
+  <li>
+    <strong>Accede a la instancia</strong><br />
+    Abre en tu navegador:
+    <pre><code>http://test.dev.miapp.com</code></pre>
+  </li>
+</ol>
+ <br>
+ <button mat-raised-button color="primary" routerLink="/dashboard">Volver al menú</button>

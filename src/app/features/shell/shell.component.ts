@@ -43,7 +43,7 @@ export class ShellComponent implements OnInit, OnDestroy {
         const category = parentRoute.snapshot.queryParamMap.get('category') || '';
 
         this.projectName = projectName;
-        this.selectedContainer = `odoo_instance_${category}_${instanceName}_db`;
+        this.selectedContainer = `odoo_instance_${category}_${instanceName}`;
 
         this.terminal.writeln(`📦 Cargando logs de: ${this.selectedContainer}`);
         console.log("✅ instanceName:", instanceName);
