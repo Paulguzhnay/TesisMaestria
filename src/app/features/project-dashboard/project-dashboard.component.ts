@@ -5,6 +5,9 @@ import { OdooInstancesService } from '../../services/odoo-instances.service';
 import { Project } from '../../models/project.model';
 import { OdooInstance } from '../../models/odoo-instance.model';
 import { ProjectContextService } from '../../services/project-context.service';
+import { MatDialog } from '@angular/material/dialog';
+import { CreateInstanceDialogComponent } from '../../core/create-instance-dialog/create-instance-dialog.component';
+
 
 
 @Component({
@@ -24,7 +27,8 @@ export class ProjectDashboardComponent implements OnInit {
     private route: ActivatedRoute,
     private projectService: ProjectService,
     private instanceService: OdooInstancesService,
-    private projectContext: ProjectContextService 
+    private projectContext: ProjectContextService,
+    private dialog: MatDialog
   ) {}
 
   ngOnInit(): void {
@@ -93,4 +97,21 @@ export class ProjectDashboardComponent implements OnInit {
     }
   });
 }
+openCreateInstanceDialog(category: string): void {
+  if (!this.project) return;
+
+  const dialogRef = this.dialog.open(CreateInstanceDialogComponent, {
+    width: '500px',
+    data: {
+      projectId: this.project.id,
+      projectName: this.project.name,
+      category: category
+    }
+  });
+
+  dialogRef.componentInstance.instanceCreated.subscribe(() => {
+    this.loadInstances(); // ✅ recargar al crear
+  });
+}
+
 }
