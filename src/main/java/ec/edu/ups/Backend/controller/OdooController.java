@@ -56,7 +56,6 @@ public class OdooController {
 
         return response;
     }
-
     @PostMapping("/install-modules")
     public ResponseEntity<String> installModules(@RequestParam String name,
                                                  @RequestParam String category,
@@ -70,6 +69,8 @@ public class OdooController {
         private String category;
         private Long projectId;
         private boolean neutralize;
+        private String codeSourceCategory;
+        private boolean copyDataFromProduction;
 
         public String getName() { return name; }
         public void setName(String name) { this.name = name; }
@@ -82,6 +83,9 @@ public class OdooController {
         public boolean isNeutralize() { return neutralize; }
 
         public void setNeutralize(boolean neutralize) { this.neutralize = neutralize;}
+
+        public String getCodeSourceCategory() { return codeSourceCategory; }
+        public boolean isCopyDataFromProduction() { return copyDataFromProduction; }
     }
 
     @GetMapping("/instances")

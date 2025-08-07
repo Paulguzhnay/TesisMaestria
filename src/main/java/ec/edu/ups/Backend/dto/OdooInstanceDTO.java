@@ -1,16 +1,15 @@
 package ec.edu.ups.Backend.dto;
 
 import ec.edu.ups.Backend.model.OdooInstance;
+import jakarta.persistence.Column;
 
 public class OdooInstanceDTO {
     private String name;
     private String category;
     private Long projectId;
     private String url;
-    private boolean neutralize;
-
-
-
+    @Column(nullable = false)
+    private Boolean neutralize = false;
 
     public Long getProjectId() {
         return projectId;
@@ -64,4 +63,3 @@ public class OdooInstanceDTO {
 
     }
 }
-
