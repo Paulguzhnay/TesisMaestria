@@ -3,6 +3,7 @@ import { Component, EventEmitter, Inject, OnInit, Output } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { OdooService } from '../../services/odoo.service';
+import { finalize } from 'rxjs/operators';
 
 export interface CreateInstanceData {
   projectId: number;
@@ -53,26 +54,31 @@ export class CreateInstanceDialogComponent implements OnInit {
   }
 
   submit(): void {
+    // ✅ Evita reentradas si ya está enviando
+    if (this.isProcessing) return;
+
     if (this.form.invalid) return;
+
+    // ✅ Sube el flag ANTES de hacer nada más
+    this.isProcessing = true;
 
     const payload = {
       ...this.form.value,
       projectId: this.data.projectId
     };
 
-    this.isProcessing = true;
-
     this.odoo.createOdooInstance(payload).subscribe({
-      next: inst => {
-        this.instanceCreated.emit(); //  Notificar al dashboard
-        this.dialogRef.close(inst); // cerrar modal
+      next: (inst) => {
+        this.instanceCreated.emit();
+        this.dialogRef.close(inst);
       },
-      error: err => {
+      error: (err) => {
         this.isProcessing = false;
-        this.form.setErrors({ server: err.error?.message });
+        this.form.setErrors({ server: err?.error?.message || 'Error del servidor' });
       }
     });
   }
+
 
   cancel(): void {
     this.dialogRef.close();

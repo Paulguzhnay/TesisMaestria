@@ -42,5 +42,8 @@
 
     <mat-dialog-actions align="end">
       <button mat-button (click)="cancel()" [disabled]="isProcessing">Cancelar</button>
-      <button mat-raised-button color="primary" (click)="submit()" [disabled]="isProcessing">Crear</button>
+ 
+      <button mat-raised-button color="primary" type="submit" [disabled]="isProcessing">
+        Crear
+      </button>
     </mat-dialog-actions>
