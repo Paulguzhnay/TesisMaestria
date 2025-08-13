@@ -71,3 +71,19 @@
   color: #2980b9;
   font-weight: bold;
 }
+
+.overlay-spinner {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1000;
+  background-color: rgba(255, 255, 255, 0.6);
+  border-radius: 8px;
+  padding: 20px;
+}
+.success-snackbar {
+  background-color: #4caf50; /* verde éxito */
+  color: white;
+  font-weight: bold;
+}

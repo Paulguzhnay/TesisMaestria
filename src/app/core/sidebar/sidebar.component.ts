@@ -126,10 +126,15 @@ export class SidebarComponent implements OnInit {
 
     ref.afterClosed().subscribe(instance => {
       if (instance) {
-        this.snackBar.open(`Instancia  creada correctamente`, 'Cerrar', { duration: 3000 });
-        this.loadInstancesByProject(this.projectName);
+        this.snackBar.open(`Instancia creada correctamente`, 'Cerrar', { duration: 2000 });
+
+        // ⏳ Esperamos un momento para mostrar el snackbar y luego recargamos
+        setTimeout(() => {
+          window.location.reload(); //  Recarga completa (como F5)
+        }, 2000);
+      } else {
+        this.isProcessing = false;
       }
-      this.isProcessing = false;
     });
   }
 
