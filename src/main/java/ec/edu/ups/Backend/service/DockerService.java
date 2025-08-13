@@ -749,9 +749,13 @@ public class DockerService {
         List<BackupInfo> backups = new ArrayList<>();
         for (File file : files) {
             if (file.getName().contains(instanceName) && file.getName().contains(category)) {
-                long timestamp = file.getName().matches(".*\\d{13}.*")
-                        ? Long.parseLong(file.getName().replaceAll("\\D", ""))
-                        : file.lastModified();
+                long timestamp;
+                try {
+                    Matcher matcher = Pattern.compile("(\\d{13})").matcher(file.getName());
+                    timestamp = matcher.find() ? Long.parseLong(matcher.group(1)) : file.lastModified();
+                } catch (Exception e) {
+                    timestamp = file.lastModified();
+                }
 
                 backups.add(new BackupInfo(
                         file.getName(),
