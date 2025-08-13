@@ -63,7 +63,7 @@ export class ProjectDashboardComponent implements OnInit {
     this.loading = true;
     this.instanceService.getByProject(this.projectName).subscribe({
       next: (data: OdooInstance[]) => {
-        this.instances = data;
+        this.instances = [...data]; // 👈 Crea nueva referencia para que Angular detecte el cambio
         this.loading = false;
       },
       error: () => {
@@ -73,41 +73,48 @@ export class ProjectDashboardComponent implements OnInit {
     });
   }
   get categorizedInstances(): { [key: string]: OdooInstance[] } {
-    console.log('Categorizing instances:', this.instances);
+    const categorized: { [key: string]: OdooInstance[] } = {};
 
-    return this.instances.reduce((acc, inst) => {
-
+    for (const inst of this.instances) {
       const cat = inst.category || 'UNASSIGNED';
-      console.log(inst.url);
-      if (!acc[cat]) acc[cat] = [];
-      acc[cat].push(inst);
-      return acc;
-    }, {} as { [key: string]: OdooInstance[] });
+      if (!categorized[cat]) categorized[cat] = [];
+      categorized[cat].push(inst);
+    }
+
+    return categorized;
   }
 
-  deleteInstance(inst: OdooInstance): void {
-    const confirmed = confirm(`¿Estás seguro de eliminar la instancia '${inst.name}'?`);
-    if (!confirmed) return;
+  deleteInstance(instance: OdooInstance): void {
+    const confirmDelete = confirm(`¿Estás seguro de eliminar la instancia ${instance.name}?`);
+    if (!confirmDelete) return;
 
     this.isProcessing = true;
 
-    this.instanceService.delete(inst.name, inst.category).subscribe({
+    this.instanceService.delete(instance.name, instance.category).subscribe({
       next: () => {
-        this.snackBar.open(`✅ Instancia '${inst.name}' eliminada correctamente`, 'Cerrar', {
-          duration: 3000,
-          panelClass: ['success-snackbar']
-        });
-        this.loadInstances();
+        this.snackBar.open(
+          `✅ Instancia ${instance.name} eliminada correctamente`,
+          'Cerrar',
+          { duration: 3000 }
+        );
+
+        // Esperar un poco para que se vea el spinner antes de recargar
+        setTimeout(() => {
+          this.isProcessing = false;
+          this.loadInstances();  // Mejor que reload para mantener estado y evitar recargar toda la app
+        }, 1000);
       },
-      error: (err) => {
-        console.error('Error al eliminar:', err);
-        alert('❌ Error al eliminar la instancia');
-      },
-      complete: () => {
+      error: () => {
         this.isProcessing = false;
+        this.snackBar.open(
+          `❌ Error al eliminar la instancia ${instance.name}`,
+          'Cerrar',
+          { duration: 4000 }
+        );
       }
     });
   }
+
 
   openCreateInstanceDialog(category: string): void {
     if (!this.project) return;
