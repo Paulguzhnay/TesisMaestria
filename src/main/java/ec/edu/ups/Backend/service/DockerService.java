@@ -87,88 +87,56 @@ public class DockerService {
             if (optionalProject.isEmpty()) return "❌ Error: Proyecto no encontrado con ID: " + projectId;
             Project project = optionalProject.get();
 
-            System.out.println("Punto 1");
-
             boolean needsMergeFromProduction = false;
             String codeSourceInstanceName = null;
             String sourceCategory = null;
 
-            // 🔍 Buscar instancia PRODUCTION (por si se requiere merge o fallback de código)
             List<OdooInstance> prodInstances = odooInstanceRepository.findByProjectIdAndCategory(projectId, "PRODUCTION");
             String productionInstanceName = !prodInstances.isEmpty() ? prodInstances.get(0).getName() : "";
-            System.out.println("prodInstances "+ prodInstances);
-            // 🔁 Lógica según categoría
-            if (category.equalsIgnoreCase("STAGING")) {
-                System.out.println("1. category STAGING "+ category);
 
+            if (category.equalsIgnoreCase("STAGING")) {
                 if ("PRODUCTION".equalsIgnoreCase(codeSourceCategory) && !productionInstanceName.isEmpty()) {
-                    System.out.println("2. codeSourceCategory "+ codeSourceCategory);
-                    System.out.println("3. productionInstanceName "+ productionInstanceName);
                     codeSourceInstanceName = productionInstanceName;
-                    System.out.println("3. productionInstanceName "+ productionInstanceName);
                     sourceCategory = "PRODUCTION";
-                    System.out.println(" sourceCategory  "+ sourceCategory);
                     needsMergeFromProduction = copyDataFromProduction;
-                    System.out.println("needsMergeFromProduction  "+needsMergeFromProduction );
-                    System.out.println("📦 Código y datos para STAGING copiados desde PRODUCTION: " + codeSourceInstanceName);
                 } else {
                     List<OdooInstance> devInstances = odooInstanceRepository.findByProjectIdAndCategory(projectId, "DEVELOPMENT");
                     if (!devInstances.isEmpty()) {
                         codeSourceInstanceName = devInstances.get(0).getName();
-                        System.out.println(" codeSourceInstanceName  "+ codeSourceInstanceName);
                         sourceCategory = "DEVELOPMENT";
-                        System.out.println("sourceCategory  "+ sourceCategory);
-                        System.out.println("📦 Código para STAGING copiado desde DEVELOPMENT: " + codeSourceInstanceName);
                     }
                 }
             } else if (category.equalsIgnoreCase("PRODUCTION")) {
-                System.out.println("1.1 category PRODUCTION "+category );
                 if ("STAGING".equalsIgnoreCase(codeSourceCategory)) {
-                    System.out.println("codeSourceCategory  "+ codeSourceCategory);
                     List<OdooInstance> stagingInstances = odooInstanceRepository.findByProjectIdAndCategory(projectId, "STAGING");
                     if (!stagingInstances.isEmpty()) {
                         codeSourceInstanceName = stagingInstances.get(0).getName();
                         sourceCategory = "STAGING";
-                        System.out.println("📦 Código para PRODUCTION copiado desde STAGING: " + codeSourceInstanceName);
                     }
                 }
             } else if (category.equalsIgnoreCase("DEVELOPMENT")) {
-                System.out.println("1.1 category DEVELOPMENT "+category );
                 if ("STAGING".equalsIgnoreCase(codeSourceCategory)) {
                     List<OdooInstance> stagingInstances = odooInstanceRepository.findByProjectIdAndCategory(projectId, "STAGING");
-                    System.out.println("stagingInstances  "+ stagingInstances);
                     if (!stagingInstances.isEmpty()) {
                         codeSourceInstanceName = stagingInstances.get(0).getName();
-                        System.out.println("codeSourceInstanceName  "+ codeSourceInstanceName);
                         sourceCategory = "STAGING";
-                        System.out.println("📦 Código para DEVELOPMENT copiado desde STAGING: " + codeSourceInstanceName);
                     }
                 } else if ("PRODUCTION".equalsIgnoreCase(codeSourceCategory) && !productionInstanceName.isEmpty()) {
                     codeSourceInstanceName = productionInstanceName;
-                    System.out.println("codeSourceInstanceName  "+ codeSourceInstanceName);
                     sourceCategory = "PRODUCTION";
-                    System.out.println("📦 Código para DEVELOPMENT copiado desde PRODUCTION: " + codeSourceInstanceName);
                 }
             }
 
-            // 📦 Construcción de nombres
             String dbContainerName = containerPrefix + category.toUpperCase() + "_" + instanceName + "_db";
-            System.out.println(" dbContainerName  "+ dbContainerName);
             String odooContainerName = containerPrefix + category.toUpperCase() + "_" + instanceName;
-            System.out.println(" odooContainerName "+odooContainerName );
             String dbVolume = "odoo_" + instanceName + "_db_data";
-            System.out.println(" dbVolume "+ dbVolume);
             String odooVolume = "odoo_" + instanceName + "_data";
-            System.out.println(" odooVolume "+ odooVolume);
             String repoPath = "C:\\odoo-modules\\" + instanceName;
-            System.out.println("repoPath  "+repoPath );
             String customAddonsPath = repoPath + "\\custom_addons";
-            System.out.println("customAddonsPath  "+customAddonsPath );
 
             int port = findAvailablePort(8069, 8100);
             if (port == -1) return "❌ Error: No hay puertos disponibles.";
 
-            // 🧼 Eliminar contenedores existentes si ya existen
             for (String containerName : List.of(dbContainerName, odooContainerName)) {
                 String checkCmd = "docker ps -a -q -f name=" + containerName;
                 Process checkProcess = Runtime.getRuntime().exec(new String[]{"cmd.exe", "/c", checkCmd});
@@ -176,9 +144,7 @@ public class DockerService {
                 String containerId = reader.readLine();
                 reader.close();
                 checkProcess.waitFor();
-
                 if (containerId != null && !containerId.trim().isEmpty()) {
-                    System.out.println("⚠️ Contenedor existente detectado: " + containerName + ". Eliminando...");
                     String removeCmd = "docker rm -f " + containerName;
                     if (!executeCommand(new String[]{"cmd.exe", "/c", removeCmd})) {
                         return "❌ Error al eliminar contenedor existente: " + containerName;
@@ -186,45 +152,33 @@ public class DockerService {
                 }
             }
 
-            // 📦 PostgreSQL
             String dbCommand = String.format(
                     "docker run -d --name %s --network %s -e POSTGRES_USER=%s -e POSTGRES_PASSWORD=%s -e POSTGRES_DB=%s -v %s:/var/lib/postgresql/data %s",
                     dbContainerName, dockerNetwork, postgresUser, postgresPassword, postgresDb, dbVolume, postgresImage
             );
-            System.out.println("dbCommand  "+dbCommand );
             if (!executeCommand(new String[]{"cmd.exe", "/c", dbCommand})) return "❌ Error al crear contenedor PostgreSQL.";
             Thread.sleep(4000);
 
             String createDbCmd = String.format("docker exec %s createdb -U %s %s", dbContainerName, postgresUser, instanceName);
             if (!executeCommand(new String[]{"cmd.exe", "/c", createDbCmd})) return "❌ Error al crear la base de datos.";
-            System.out.println(" createDbCmd "+createDbCmd );
-            // 📂 Preparar volumen Odoo
+
             String prepareVolumeCmd = String.format(
                     "docker run --rm -v %s:/data busybox sh -c \"mkdir -p /data/filestore/%s /data/sessions && chmod -R 777 /data\"",
                     odooVolume, instanceName
             );
-            System.out.println("prepareVolumeCmd  "+prepareVolumeCmd );
             if (!executeCommand(new String[]{"cmd.exe", "/c", prepareVolumeCmd})) return "❌ Error al preparar volumen de Odoo.";
 
-            // 🔁 Copiar módulos personalizados desde instancia fuente
             if (codeSourceInstanceName != null) {
-                System.out.println("2.... codeSourceInstanceName  "+ codeSourceInstanceName);
                 String sourceContainer = containerPrefix + sourceCategory + "_" + codeSourceInstanceName;
-                System.out.println("sourceContainer  "+sourceContainer );
                 File addonsTarget = new File(customAddonsPath);
-                System.out.println("addonsTarget  "+addonsTarget );
                 if (!addonsTarget.exists()) addonsTarget.mkdirs();
 
-                System.out.println("📁 Copiando módulos desde " + sourceContainer + " a " + customAddonsPath);
-
                 String checkExtraAddons = String.format("docker exec %s test -d /mnt/extra-addons", sourceContainer);
-                System.out.println(" checkExtraAddons "+checkExtraAddons );
                 if (executeCommand(new String[]{"cmd.exe", "/c", checkExtraAddons})) {
                     String tempPath = "/tmp/addons_to_copy";
                     String copyToTmp = String.format(
                             "docker exec %s bash -c \"rm -rf %s && mkdir -p %s && cp -r /mnt/extra-addons/* %s/\"",
                             sourceContainer, tempPath, tempPath, tempPath);
-                    System.out.println("copyToTmp  "+ copyToTmp);
                     if (executeCommand(new String[]{"cmd.exe", "/c", copyToTmp})) {
                         String dockerCpCommand = String.format("docker cp %s:%s/. %s", sourceContainer, tempPath, customAddonsPath);
                         executeCommand(new String[]{"cmd.exe", "/c", dockerCpCommand});
@@ -232,18 +186,14 @@ public class DockerService {
                 }
             }
 
-            // 🚀 Crear contenedor Odoo
             String neutralizeEnv = neutralize ? "-e NEUTRALIZE=true " : "";
-            System.out.println("neutralizeEnv  "+neutralizeEnv );
             String odooCommand = String.format(
                     "docker run -d --name %s --network %s -e HOST=%s -e USER=%s -e PASSWORD=%s -e DB=%s %s -p %d:8069 -v %s:/var/lib/odoo -v %s:/var/lib/odoo/custom_addons -v %s:/mnt/extra-addons %s",
                     odooContainerName, dockerNetwork, dbContainerName, postgresUser, postgresPassword, instanceName,
                     neutralizeEnv, port, odooVolume, customAddonsPath, customAddonsPath, odooImage
             );
-            System.out.println("odooCommand  "+odooCommand );
             if (!executeCommand(new String[]{"cmd.exe", "/c", odooCommand})) return "❌ Error al crear el contenedor de Odoo.";
 
-            // ⏳ Esperar conexión a base
             int retries = 10;
             boolean connected = false;
             while (retries-- > 0) {
@@ -259,58 +209,68 @@ public class DockerService {
             }
             if (!connected) return "❌ Error: Odoo no pudo conectarse a PostgreSQL.";
 
-            // 🧱 Inicializar base con módulos base (solo si no se hará merge)
             if (!needsMergeFromProduction) {
                 String demoParam = category.equalsIgnoreCase("DEVELOPMENT") ? "all" : "False";
-                System.out.println(" demoParam "+ demoParam);
                 String initDbCmd = String.format(
                         "docker exec %s odoo -d %s -i base --db_host=%s --db_user=%s --db_password=%s --without-demo=%s --stop-after-init",
                         odooContainerName, instanceName, dbContainerName, postgresUser, postgresPassword, demoParam
                 );
-                System.out.println("initDbCmd  "+ initDbCmd);
                 if (!executeCommand(new String[]{"cmd.exe", "/c", initDbCmd})) return "❌ Error al inicializar la base de datos.";
             }
 
-            // 🧩 Instalar módulos personalizados
+            // ✅ NUEVA SECCIÓN: Instalar módulos personalizados robustamente
             File customFolder = new File(customAddonsPath);
-            System.out.println("customFolder  "+customFolder );
-            if (customFolder.exists() && customFolder.listFiles() != null && customFolder.listFiles().length > 0) {
-                String listModulesCmd = String.format("docker exec %s bash -c \"ls /var/lib/odoo/custom_addons\"", odooContainerName);
-                Process process = Runtime.getRuntime().exec(new String[]{"cmd.exe", "/c", listModulesCmd});
-                BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-                StringBuilder moduleList = new StringBuilder();
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    if (!line.trim().isEmpty()) {
-                        moduleList.append(line.trim()).append(",");
-                    }
-                }
-                reader.close();
-                process.waitFor();
+            System.out.println("📁 Verificando existencia de custom_addons: " + customAddonsPath);
 
-                if (!moduleList.toString().isEmpty()) {
-                    String modulesToInstall = moduleList.toString().replaceAll(",$", "");
-                    String installModulesCmd = String.format(
-                            "docker exec %s odoo -d %s -i %s --db_host=%s --db_user=%s --db_password=%s --stop-after-init",
-                            odooContainerName, instanceName, modulesToInstall, dbContainerName, postgresUser, postgresPassword
+            if (customFolder.exists() && customFolder.isDirectory()) {
+                File[] files = customFolder.listFiles();
+                if (files != null && files.length > 0) {
+                    System.out.println("📦 Listando módulos personalizados para instalación...");
+
+                    String listModulesCmd = String.format(
+                            "docker exec %s bash -c \"ls -1 /var/lib/odoo/custom_addons 2>/dev/null || echo 'EMPTY'\"",
+                            odooContainerName
                     );
-                    executeCommand(new String[]{"cmd.exe", "/c", installModulesCmd});
+
+                    Process process = Runtime.getRuntime().exec(new String[]{"cmd.exe", "/c", listModulesCmd});
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                    StringBuilder moduleList = new StringBuilder();
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        if (!line.trim().isEmpty() && !line.trim().equals("EMPTY")) {
+                            moduleList.append(line.trim()).append(",");
+                        }
+                    }
+                    reader.close();
+                    process.waitFor();
+
+                    String modulesToInstall = moduleList.toString().replaceAll(",$", "");
+                    if (!modulesToInstall.isEmpty()) {
+                        System.out.println("📦 Instalando módulos: " + modulesToInstall);
+                        String installModulesCmd = String.format(
+                                "docker exec %s odoo -d %s -i %s --db_host=%s --db_user=%s --db_password=%s --stop-after-init",
+                                odooContainerName, instanceName, modulesToInstall, dbContainerName, postgresUser, postgresPassword
+                        );
+                        if (!executeCommand(new String[]{"cmd.exe", "/c", installModulesCmd})) {
+                            System.out.println("⚠️ Error al instalar módulos personalizados.");
+                        }
+                    } else {
+                        System.out.println("ℹ️ No se encontraron módulos personalizados válidos para instalar.");
+                    }
+                } else {
+                    System.out.println("ℹ️ Carpeta de módulos está vacía: " + customAddonsPath);
                 }
             }
 
-            // 📝 Guardar instancia y crear rama GitHub
             String url = "http://localhost:" + port + "/web/login?db=" + instanceName;
-            System.out.println(" url "+url );
             OdooInstance instance = new OdooInstance(instanceName, category, url, neutralize, port);
-            System.out.println("instance  "+instance );
             instance.setProject(project);
             odooInstanceRepository.save(instance);
             createGitHubBranch(project, instanceName, category);
 
-            // 🔁 Merge desde PRODUCTION si aplica
             if (needsMergeFromProduction) {
-                String mergeResult = mergeOdooInstances(projectId, productionInstanceName, instanceName);
-                System.out.println(" mergeResult  "+ mergeResult);
+                String mergeResult = mergeOdooInstances(  projectId, productionInstanceName, instanceName);
+
                 System.out.println("🧾 Resultado del merge: " + mergeResult);
             }
 
@@ -577,6 +537,31 @@ public class DockerService {
         Process process = Runtime.getRuntime().exec(command);
         int exitCode = process.waitFor();
         return exitCode == 0;
+    }
+
+    private String executeCommands(String command) throws IOException, InterruptedException {
+        Process process = Runtime.getRuntime().exec(command);
+        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+        StringBuilder output = new StringBuilder();
+        String line;
+        while ((line = reader.readLine()) != null) {
+            output.append(line).append("\n");
+        }
+
+        // También capturar errores (stderr)
+        BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
+        StringBuilder errorOutput = new StringBuilder();
+        while ((line = errorReader.readLine()) != null) {
+            errorOutput.append(line).append("\n");
+        }
+
+        int exitCode = process.waitFor();
+        if (exitCode != 0) {
+            output.append("↪️ Exit code: ").append(exitCode).append("\n");
+            output.append("❌ Error Output:\n").append(errorOutput);
+        }
+
+        return output.toString();
     }
 
     private boolean isContainerRunning(String containerName) {
@@ -914,6 +899,7 @@ public class DockerService {
     }
 
 
+
     public String mergeOdooInstances(Long projectId, String sourceInstance, String targetInstance) {
         try {
             System.out.println("🔁 Iniciando merge desde " + sourceInstance + " hacia " + targetInstance);
@@ -994,35 +980,55 @@ public class DockerService {
                 return "❌ Falló copiar filestore al host";
             }
 
-            // 4) Restaurar filestore en DESTINO (con auto-rename a DB destino)
+
+            // Paso 4: Restaurar filestore destino
             System.out.println("📦 Restaurando filestore en destino (auto-rename)...");
-            if (!executeCommand(String.format("cmd.exe /c docker cp %s %s:/tmp/filestore.tar.gz", fsTarHost, dstOdooC))) {
-                return "❌ Falló copiar filestore al destino";
+
+            // 🔄 Arrancar contenedor destino si está detenido (requerido para docker exec)
+            System.out.println("🔄 Arrancando contenedor destino temporalmente para restaurar filestore...");
+            if (!executeCommand("cmd.exe /c docker start " + dstOdooC)) {
+                return "❌ No se pudo iniciar temporalmente el contenedor destino para restaurar el filestore.";
             }
 
+            // ⬆️ Copiar tar.gz desde host al contenedor destino
+            System.out.println("📁 Copiando filestore.tar.gz al contenedor destino...");
+            if (!executeCommand(String.format("cmd.exe /c docker cp %s %s:/tmp/filestore.tar.gz", fsTarHost, dstOdooC))) {
+                return "❌ Falló la copia del filestore.tar.gz al contenedor destino.";
+            }
+
+            // ✅ Validar que el archivo sí existe dentro del contenedor destino
+            System.out.println("🔍 Verificando existencia del filestore.tar.gz en el contenedor destino...");
+            String checkTarOutput = executeCommandWithResult(
+                    String.format("cmd.exe /c docker exec %s ls -lh /tmp/filestore.tar.gz || echo 'MISSING'", dstOdooC));
+            System.out.println("📁 Verificación de /tmp/filestore.tar.gz:\n" + checkTarOutput);
+            if (checkTarOutput.contains("MISSING") || checkTarOutput.toLowerCase().contains("no such file")) {
+                return "❌ El archivo /tmp/filestore.tar.gz no está presente en el contenedor destino. Revisa la copia.";
+            }
+
+            // 🗃️ Listar contenido del directorio /tmp como depuración adicional
+            executeCommand(String.format("cmd.exe /c docker exec %s ls -l /tmp", dstOdooC));
+
+            // 🧩 Restaurar el filestore ahora que el archivo está validado
             String restoreDstFs =
                     "set -e; " +
-                            "if [ -d /var/lib/odoo/.local/share/Odoo/filestore ]; then " +
-                            "  BASE=/var/lib/odoo/.local/share/Odoo/filestore; " +
-                            "else " +
-                            "  BASE=/var/lib/odoo/filestore; " +
+                            "BASE=/var/lib/odoo/filestore; " +
+                            "mkdir -p \"$BASE\"; " +
+                            "rm -rf \"$BASE\"/" + targetInstance + "; " +
+                            "tar xzf /tmp/filestore.tar.gz -C \"$BASE\"; " +
+                            "if [ -d \"$BASE/" + sourceInstance + "\" ]; then " +
+                            "  mv \"$BASE/" + sourceInstance + "\" \"$BASE/" + targetInstance + "\"; " +
                             "fi; " +
-                            "mkdir -p \"$BASE\" /tmp/filestore_import; " +
-                            "rm -rf /tmp/filestore_import/*; " +
-                            "tar xzf /tmp/filestore.tar.gz -C /tmp/filestore_import; " +
-                            "if [ -d /tmp/filestore_import/" + sourceInstance + " ]; then " +
-                            "  rm -rf \"$BASE\"/" + targetInstance + "; " +
-                            "  mv /tmp/filestore_import/" + sourceInstance + " \"$BASE\"/" + targetInstance + "; " +
-                            "else " +
-                            "  rm -rf \"$BASE\"/" + targetInstance + "; " +
-                            "  mkdir -p \"$BASE\"/" + targetInstance + "; " +
-                            "  shopt -s dotglob; mv /tmp/filestore_import/* \"$BASE\"/" + targetInstance + "/; " +
-                            "fi; " +
-                            "chmod -R 777 \"$BASE\"/" + targetInstance + "; " +
-                            "echo \"FS_BASE_DST=$BASE\"";
-            if (!executeCommand(String.format("cmd.exe /c docker exec %s bash -lc \"%s\"", dstOdooC, restoreDstFs))) {
+                            "chmod -R 777 \"$BASE/" + targetInstance + "\";";
+
+            String restoreFsCommand = String.format("cmd.exe /c docker exec %s bash -lc \"%s\"", dstOdooC, restoreDstFs);
+            String restoreFsOutput = executeCommandWithResult(restoreFsCommand);
+            System.out.println("📤 Output filestore restore:\n" + restoreFsOutput);
+
+            if (restoreFsOutput.contains("No such file") || restoreFsOutput.toLowerCase().contains("error")) {
                 return "❌ Falló restauración/rename del filestore en " + dstOdooC + " (base autodetectada)";
             }
+
+
 
             // 5) Copiar custom_addons si existen
             System.out.println("🧩 Copiando custom_addons si existen...");
@@ -1104,42 +1110,96 @@ public class DockerService {
         }
     }
 
+    // Método para ejecutar un comando sin necesidad de capturar la salida
+    public int execute(String command) throws IOException, InterruptedException {
+        System.out.println("⚙️ Ejecutando: " + command);
+        Process process = Runtime.getRuntime().exec(new String[]{"cmd.exe", "/c", command});
+        int exitCode = process.waitFor();
 
-
-    private String detectarFilestoreBase(String odooContainer, String dbName) throws IOException, InterruptedException {
-        String probe = String.format(
-                "cmd.exe /c docker exec %s bash -lc \"if [ -d /var/lib/odoo/.local/share/Odoo/filestore/%s ]; then echo /var/lib/odoo/.local/share/Odoo/filestore; " +
-                        "elif [ -d /var/lib/odoo/filestore/%s ]; then echo /var/lib/odoo/filestore; fi\"",
-                odooContainer, dbName, dbName
-        );
-        String out = executeCommandAndGetOutput(probe);
-        return out == null ? null : out.trim();
-    }
-
-    private String detectFilestoreBase(String container) throws IOException, InterruptedException {
-        // Primero intenta .local (path moderno)
-        int modern = executeCommandAndGetExitCode(
-                "docker exec " + container + " bash -lc \"test -d /var/lib/odoo/.local/share/Odoo/filestore\""
-        );
-        if (modern == 0) return "/var/lib/odoo/.local/share/Odoo/filestore";
-        // Si no, usa el legacy
-        return "/var/lib/odoo/filestore";
-    }
-
-    private String executeCommandAndGetOutput(String command) throws IOException, InterruptedException {
-        ProcessBuilder pb = new ProcessBuilder("cmd.exe", "/c", command);
-        pb.redirectErrorStream(true);
-        Process p = pb.start();
-        StringBuilder out = new StringBuilder();
-        try (BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                out.append(line).append("\n");
-            }
+        // Mostrar errores si los hay
+        BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
+        String errorLine;
+        while ((errorLine = errorReader.readLine()) != null) {
+            System.err.println("❌ STDERR: " + errorLine);
         }
-        p.waitFor();
-        return out.toString();
+
+        return exitCode;
     }
+
+    // Método para ejecutar un comando y capturar su salida
+    public String executeWithOutput(String command) throws IOException, InterruptedException {
+        System.out.println("⚙️ Ejecutando (con salida): " + command);
+        Process process = Runtime.getRuntime().exec(new String[]{"cmd.exe", "/c", command});
+        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+        StringBuilder output = new StringBuilder();
+        String line;
+
+        while ((line = reader.readLine()) != null) {
+            output.append(line).append("\n");
+        }
+
+        process.waitFor();
+
+        // Mostrar errores si los hay
+        BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
+        String errorLine;
+        while ((errorLine = errorReader.readLine()) != null) {
+            System.err.println("❌ STDERR: " + errorLine);
+        }
+
+        return output.toString();
+    }
+
+
+
+
+
+
+    public String executeCommandWithOutput(String command) throws IOException {
+        Process process = Runtime.getRuntime().exec(command);
+        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+        StringBuilder output = new StringBuilder();
+        String line;
+        while ((line = reader.readLine()) != null) {
+            output.append(line).append("\n");
+        }
+        return output.toString();
+    }
+
+    // ✅ Ejecuta comando y lanza excepción si falla
+    public void executeOrThrow(String command) throws IOException, InterruptedException {
+        Process process = Runtime.getRuntime().exec(command);
+        if (process.waitFor() != 0) {
+            throw new RuntimeException("❌ Error al ejecutar: " + command);
+        }
+    }
+
+
+
+
+    public String executeCommandWithResult(String command) {
+        StringBuilder output = new StringBuilder();
+        try {
+            ProcessBuilder builder = new ProcessBuilder("cmd.exe", "/c", command);
+            builder.redirectErrorStream(true);
+            Process process = builder.start();
+
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    output.append(line).append(System.lineSeparator());
+                }
+            }
+
+            int exitCode = process.waitFor();
+            output.append("↪️ Exit code: ").append(exitCode);
+        } catch (IOException | InterruptedException e) {
+            output.append("❌ Error ejecutando comando: ").append(e.getMessage());
+        }
+        return output.toString();
+    }
+
+
 
     private boolean runCmd(String command) throws IOException {
         try {
