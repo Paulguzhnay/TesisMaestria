@@ -269,7 +269,7 @@ public class DockerService {
             createGitHubBranch(project, instanceName, category);
 
             if (needsMergeFromProduction) {
-                String mergeResult = mergeOdooInstances(  projectId, productionInstanceName, instanceName);
+                String mergeResult = mergeOdooInstancesProd(  projectId, productionInstanceName, instanceName);
 
                 System.out.println("🧾 Resultado del merge: " + mergeResult);
             }
@@ -539,30 +539,6 @@ public class DockerService {
         return exitCode == 0;
     }
 
-    private String executeCommands(String command) throws IOException, InterruptedException {
-        Process process = Runtime.getRuntime().exec(command);
-        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-        StringBuilder output = new StringBuilder();
-        String line;
-        while ((line = reader.readLine()) != null) {
-            output.append(line).append("\n");
-        }
-
-        // También capturar errores (stderr)
-        BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
-        StringBuilder errorOutput = new StringBuilder();
-        while ((line = errorReader.readLine()) != null) {
-            errorOutput.append(line).append("\n");
-        }
-
-        int exitCode = process.waitFor();
-        if (exitCode != 0) {
-            output.append("↪️ Exit code: ").append(exitCode).append("\n");
-            output.append("❌ Error Output:\n").append(errorOutput);
-        }
-
-        return output.toString();
-    }
 
     private boolean isContainerRunning(String containerName) {
         try {
@@ -582,9 +558,6 @@ public class DockerService {
 
 
 
-    public List<OdooInstance> getAllInstances() {
-        return odooInstanceRepository.findAll();
-    }
 
     public boolean backupOdooInstance(String instanceName, String category) {
         try {
@@ -900,7 +873,7 @@ public class DockerService {
 
 
 
-    public String mergeOdooInstances(Long projectId, String sourceInstance, String targetInstance) {
+    public String mergeOdooInstancesProd(Long projectId, String sourceInstance, String targetInstance) {
         try {
             System.out.println("🔁 Iniciando merge desde " + sourceInstance + " hacia " + targetInstance);
 
@@ -1107,6 +1080,90 @@ public class DockerService {
         } catch (Exception e) {
             e.printStackTrace();
             return "❌ Error inesperado durante el merge: " + e.getMessage();
+        }
+    }
+
+
+    //MERGE GENERAL
+
+    public String mergeOdooInstances(Long projectId, String sourceInstance, String targetInstance) {
+        try {
+            System.out.println("🔁 Iniciando merge desde " + sourceInstance + " hacia " + targetInstance);
+
+            String sourceDbContainer = "odoo_instance_DEVELOPMENT_" + sourceInstance + "_db";
+            String sourceOdooContainer = "odoo_instance_DEVELOPMENT_" + sourceInstance;
+            String targetDbContainer = "odoo_instance_STAGING_" + targetInstance + "_db";
+            String targetOdooContainer = "odoo_instance_STAGING_" + targetInstance;
+
+            System.out.println("sourceDbContainer   = " + sourceDbContainer);
+            System.out.println("sourceOdooContainer = " + sourceOdooContainer);
+            System.out.println("targetDbContainer   = " + targetDbContainer);
+            System.out.println("targetOdooContainer = " + targetOdooContainer);
+
+            // 🛑 Detener contenedor destino
+            System.out.println("🛑 Deteniendo contenedor Odoo destino (si está corriendo)...");
+            execute("docker stop " + targetOdooContainer);
+
+            // 📦 Dump de base de datos
+            System.out.println("📦 Generando dump de base...");
+            String dumpCommand = "docker exec " + sourceDbContainer + " pg_dump -Fc -U odoo -d " + sourceInstance + " -f /tmp/source.dump";
+            execute(dumpCommand);
+
+            // ♻️ Restaurar en base destino
+            System.out.println("♻️ Restaurando DB en destino (terminate backends, drop/create, pg_restore)...");
+            execute("docker exec " + targetDbContainer + " psql -U odoo -c \"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '" + targetInstance + "'\"");
+            execute("docker exec " + targetDbContainer + " dropdb -U odoo " + targetInstance);
+            execute("docker exec " + targetDbContainer + " createdb -U odoo " + targetInstance);
+            execute("docker cp " + sourceDbContainer + ":/tmp/source.dump /tmp/source.dump");
+            execute("docker cp /tmp/source.dump " + targetDbContainer + ":/tmp/source.dump");
+            execute("docker exec " + targetDbContainer + " pg_restore -U odoo -d " + targetInstance + " /tmp/source.dump");
+
+            // 🗂️ Filestore
+            System.out.println("🗂️ Empaquetando filestore en origen (auto-detect)...");
+            String filestorePath = "/var/lib/odoo/.local/share/Odoo/filestore/" + sourceInstance;
+            execute("docker exec " + sourceOdooContainer + " tar czf /tmp/filestore.tar.gz -C " + filestorePath + " .");
+
+            System.out.println("📦 Restaurando filestore en destino (auto-rename)...");
+            execute("docker start " + targetOdooContainer);
+            execute("docker cp " + sourceOdooContainer + ":/tmp/filestore.tar.gz /tmp/filestore.tar.gz");
+            execute("docker cp /tmp/filestore.tar.gz " + targetOdooContainer + ":/tmp/filestore.tar.gz");
+
+            System.out.println("🔍 Verificando existencia del filestore.tar.gz en el contenedor destino...");
+            String verifyOutput = executeWithOutput("docker exec " + targetOdooContainer + " ls -lh /tmp/filestore.tar.gz");
+            System.out.println("📁 Verificación de /tmp/filestore.tar.gz:\n" + verifyOutput);
+
+            System.out.println("📤 Output filestore restore:");
+            execute("docker exec " + targetOdooContainer + " bash -c 'rm -rf /var/lib/odoo/.local/share/Odoo/filestore/" + targetInstance + " && mkdir -p /var/lib/odoo/.local/share/Odoo/filestore/" + targetInstance + "'");
+            execute("docker exec " + targetOdooContainer + " bash -c 'tar xzf /tmp/filestore.tar.gz -C /var/lib/odoo/.local/share/Odoo/filestore/" + targetInstance + "'");
+
+            // 🧩 Copiar módulos personalizados
+            System.out.println("🧩 Copiando custom_addons si existen...");
+
+            String[] addonPaths = {"/var/lib/odoo/custom_addons", "/mnt/extra-addons"};
+            for (String addonsPath : addonPaths) {
+                String manifestCheck = executeWithOutput("docker exec " + sourceOdooContainer + " find " + addonsPath + " -name '__manifest__.py'");
+                System.out.println("📤 Output extracción custom_addons en " + addonsPath + ":\n" + manifestCheck);
+
+                if (!manifestCheck.trim().isEmpty()) {
+                    System.out.println("📁 Archivos en custom_addons:");
+                    String listOutput = executeWithOutput("docker exec " + sourceOdooContainer + " find " + addonsPath);
+                    System.out.println(listOutput);
+
+                    // Tar y copiar
+                    execute("docker exec " + sourceOdooContainer + " tar czf /tmp/custom_addons.tar.gz -C " + addonsPath + " .");
+                    execute("docker cp " + sourceOdooContainer + ":/tmp/custom_addons.tar.gz /tmp/custom_addons.tar.gz");
+                    execute("docker cp /tmp/custom_addons.tar.gz " + targetOdooContainer + ":/tmp/custom_addons.tar.gz");
+
+                    // Extraer en destino
+                    execute("docker exec " + targetOdooContainer + " mkdir -p " + addonsPath);
+                    execute("docker exec " + targetOdooContainer + " tar xzf /tmp/custom_addons.tar.gz -C " + addonsPath);
+                }
+            }
+
+            return "✅ Merge finalizado exitosamente desde " + sourceInstance + " a " + targetInstance;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "❌ Error durante el merge: " + e.getMessage();
         }
     }
 
