@@ -31,11 +31,14 @@ public class OdooController {
         Map<String, String> response = new HashMap<>();
 
         try {
+            // ✅ Orden correcto de parámetros
             String url = dockerService.createOdooInstance(
                     request.getName(),
                     request.getCategory(),
                     request.getProjectId(),
-                    request.isNeutralize()
+                    request.isNeutralize(),
+                    request.getCodeSourceCategory(),
+                    request.isCopyDataFromProduction()
             );
 
             if (url != null && url.startsWith("http")) {
@@ -56,6 +59,9 @@ public class OdooController {
 
         return response;
     }
+
+
+
     @PostMapping("/install-modules")
     public ResponseEntity<String> installModules(@RequestParam String name,
                                                  @RequestParam String category,
