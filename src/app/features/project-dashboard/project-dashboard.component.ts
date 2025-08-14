@@ -90,19 +90,22 @@ export class ProjectDashboardComponent implements OnInit {
 
     this.isProcessing = true;
 
+    this.snackBar.open(`🕐 Eliminando la instancia ${instance.name}...`, '', {
+      duration: 2000
+    });
+
     this.instanceService.delete(instance.name, instance.category).subscribe({
       next: () => {
         this.snackBar.open(
           `✅ Instancia ${instance.name} eliminada correctamente`,
           'Cerrar',
-          { duration: 3000 }
+          { duration: 2500 }
         );
 
-        // Esperar un poco para que se vea el spinner antes de recargar
         setTimeout(() => {
           this.isProcessing = false;
-          this.loadInstances();  // Mejor que reload para mantener estado y evitar recargar toda la app
-        }, 1000);
+          window.location.reload();  // Recarga completa de la página
+        }, 1500); // Espera para que se vea el snackbar antes del reload
       },
       error: () => {
         this.isProcessing = false;
