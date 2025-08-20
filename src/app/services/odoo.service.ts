@@ -26,14 +26,17 @@ export class OdooService {
   }
 
   //------------------
-  mergeInstances(sourceName: string, targetName: string, projectId: number): Observable<string> {
-    const payload = {
-      projectId,
-      source: sourceName,
-      target: targetName
-    };
-    return this.http.post<string>(`${this.apiUrl}/merge`, payload, { responseType: 'text' as 'json' });
-  }
+mergeInstances(sourceName: string, targetName: string, projectId: number, sourceCategory: string, targetCategory: string): Observable<string> {
+  const payload = {
+    projectId,
+    source: sourceName,
+    target: targetName,
+    sourceCategory,
+    targetCategory
+  };
+  console.log(" Payload de fusión:", payload);
+  return this.http.post<string>(`${this.apiUrl}/merge`, payload, { responseType: 'text' as 'json' });
+}
   //---------------------
   getByProject(projectName: string): Observable<OdooInstance[]> {
     const url = `http://localhost:8080/api/odoo/instances/by-project/${projectName}`;

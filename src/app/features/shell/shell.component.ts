@@ -102,7 +102,7 @@ export class ShellComponent implements OnInit, OnDestroy {
     // Actualizar cada 5 segundos
     this.intervalId = setInterval(() => {
       this.fetchLogs(containerName);
-    }, 5000);
+    }, 10000);
   }
 
   fetchLogs(containerName: string): void {

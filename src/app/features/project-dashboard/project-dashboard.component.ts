@@ -63,7 +63,7 @@ export class ProjectDashboardComponent implements OnInit {
     this.loading = true;
     this.instanceService.getByProject(this.projectName).subscribe({
       next: (data: OdooInstance[]) => {
-        this.instances = [...data]; // 👈 Crea nueva referencia para que Angular detecte el cambio
+        this.instances = [...data]; //  Crea nueva referencia para que Angular detecte el cambio
         this.loading = false;
       },
       error: () => {

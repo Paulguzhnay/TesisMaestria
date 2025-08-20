@@ -183,46 +183,52 @@ export class SidebarComponent implements OnInit {
       target: this.selectedTarget.name,
       projectId: this.projectId
     });
+    console.log(" Categorías:", this.selectedSource.category, this.selectedTarget.category);
 
     this.odooService.mergeInstances(
       this.selectedSource.name,
       this.selectedTarget.name,
-      this.projectId).subscribe({
-        next: (response) => {
-          console.log('Respuesta del merge:', response);
+      this.projectId,
+      this.selectedSource.category,
+      this.selectedTarget.category,
 
-          if (response.includes('✅')) {
-            this.snackBar.open(` Merge exitoso: ${response}`, 'Cerrar', { duration: 6000, panelClass: ['success-snackbar'] });
-          } else if (response.includes('⚠️')) {
-            this.snackBar.open(` Merge con advertencias: ${response}`, 'Cerrar', { duration: 6000, panelClass: ['warning-snackbar'] });
-          } else if (response.includes('❌')) {
-            this.snackBar.open(` Error en el merge: ${response}`, 'Cerrar', { duration: 6000, panelClass: ['error-snackbar'] });
-          } else {
-            this.snackBar.open(` Resultado del merge: ${response}`, 'Cerrar', { duration: 6000 });
-          }
 
-          this.loadInstances();
-        },
-        error: (error) => {
-          console.error('Error al hacer merge:', error);
+    ).subscribe({
+      next: (response) => {
+        console.log('Respuesta del merge:', response);
 
-          if (error.status === 401) {
-            this.snackBar.open('⚠️ Token expirado. Redirigiendo a GitHub...', 'Cerrar', {
-              duration: 6000,
-              panelClass: ['error-snackbar']
-            });
-            this.odooService.handleUnauthorized();
-          } else {
-            this.snackBar.open('❌ Error grave al hacer merge. Revisa los logs del backend.', 'Cerrar', {
-              duration: 6000,
-              panelClass: ['error-snackbar']
-            });
-          }
-        },
-        complete: () => {
-          this.isProcessing = false; // ⬅ Finaliza loading cuando el observable termina
+        if (response.includes('✅')) {
+          this.snackBar.open(` Merge exitoso: ${response}`, 'Cerrar', { duration: 6000, panelClass: ['success-snackbar'] });
+        } else if (response.includes('⚠️')) {
+          this.snackBar.open(` Merge con advertencias: ${response}`, 'Cerrar', { duration: 6000, panelClass: ['warning-snackbar'] });
+        } else if (response.includes('❌')) {
+          this.snackBar.open(` Error en el merge: ${response}`, 'Cerrar', { duration: 6000, panelClass: ['error-snackbar'] });
+        } else {
+          this.snackBar.open(` Resultado del merge: ${response}`, 'Cerrar', { duration: 6000 });
         }
-      });
+
+        this.loadInstances();
+      },
+      error: (error) => {
+        console.error('Error al hacer merge:', error);
+
+        if (error.status === 401) {
+          this.snackBar.open('⚠️ Token expirado. Redirigiendo a GitHub...', 'Cerrar', {
+            duration: 6000,
+            panelClass: ['error-snackbar']
+          });
+          this.odooService.handleUnauthorized();
+        } else {
+          this.snackBar.open('❌ Error grave al hacer merge. Revisa los logs del backend.', 'Cerrar', {
+            duration: 6000,
+            panelClass: ['error-snackbar']
+          });
+        }
+      },
+      complete: () => {
+        this.isProcessing = false; // ⬅ Finaliza loading cuando el observable termina
+      }
+    });
   }
 
 
