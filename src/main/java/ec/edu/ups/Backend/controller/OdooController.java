@@ -110,10 +110,11 @@ public class OdooController {
     public ResponseEntity<String> mergeInstances(@RequestBody MergeRequest request) {
         try {
             String result = dockerService.mergeOdooInstances(
-                    request.getProjectId(),
                     request.getSource(),
-                    request.getTarget()
+                    request.getTarget(),
+                    request.getProjectId()  // ahora este va al final
             );
+
             System.out.println(" Resultado del merge: " + result);
 
             return result.startsWith("✅")
@@ -124,6 +125,8 @@ public class OdooController {
             return ResponseEntity.status(500).body("❌ Error inesperado: " + e.getMessage());
         }
     }
+
+
 
     @GetMapping("/instances/by-project/{projectName}")
     public ResponseEntity<List<OdooInstanceDTO>> getInstancesByProject(@PathVariable String projectName) {

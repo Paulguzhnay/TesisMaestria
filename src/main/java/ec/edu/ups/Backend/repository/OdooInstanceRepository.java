@@ -24,5 +24,6 @@ public interface OdooInstanceRepository extends JpaRepository<OdooInstance, Long
     List<OdooInstance> findByProjectIdAndCategory(Long projectId, String category);
     Optional<OdooInstance> findByCategoryAndProjectId(String category, Long projectId);
     Optional<OdooInstance> findFirstByProjectIdAndCategory(Long projectId, String category);
+    Optional<OdooInstance> findByNameAndProjectId(String name, Long projectId);
 
 }
