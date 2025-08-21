@@ -14,6 +14,7 @@ import { ShellDbComponent } from './features/shell-db/shell-db.component';
 import { InstanceDetailComponent } from './features/instance-detail/instance-detail.component';
 import { GithubCallbackComponent } from './features/github-callback/github-callback.component';
 import { InstructionsComponent } from './features/instructions/instructions.component';
+import { ShellExecComponent } from './features/shell-exec/shell-exec.component';
 
 const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
@@ -31,13 +32,14 @@ const routes: Routes = [
   {path: 'instructions', component: InstructionsComponent},
   {
     path: 'projects/:projectName/instance/:instanceName',
-    component: InstanceDetailComponent,
-    children: [
-      { path: 'logs', component: ShellComponent },
-      { path: 'shell-db', component: ShellDbComponent },
-      { path: 'backups', component: BackupsComponent },
-      { path: 'import-db', component: ImportDatabaseComponent }
-    ]
+      component: InstanceDetailComponent,
+      children: [
+        { path: 'logs', component: ShellComponent },
+        { path: 'shell-db', component: ShellDbComponent },
+        { path: 'backups', component: BackupsComponent },
+        { path: 'import-db', component: ImportDatabaseComponent },
+        { path: 'shellexec', component: ShellExecComponent },
+      ]
   },
   { path: '**', redirectTo: 'project-login' }
 ];

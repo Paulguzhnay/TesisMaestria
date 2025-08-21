@@ -34,6 +34,9 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { InstanceDetailComponent } from './instance-detail/instance-detail.component';
 import { GithubCallbackComponent } from './github-callback/github-callback.component';
 import { InstructionsComponent } from './instructions/instructions.component';
+ 
+import { ShellExecComponent } from './shell-exec/shell-exec.component';
+
 
 
 @NgModule({
@@ -51,7 +54,9 @@ import { InstructionsComponent } from './instructions/instructions.component';
     ShellDbComponent,
     InstanceDetailComponent,
     GithubCallbackComponent,
-    InstructionsComponent
+    InstructionsComponent,
+
+    ShellExecComponent
   ],
 
   imports: [

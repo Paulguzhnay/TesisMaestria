@@ -1,0 +1,15 @@
+.shell-wrapper { height: 100%; }
+.shell-container { height: 100%; }
+
+.terminal-box {
+  max-height: 70vh;   /* o 80vh, a tu gusto */
+  overflow: auto;     /* ← permite scroll */
+  background: #000;
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.terminal {
+  height: 100%;
+  display: block;     /* importante para que ocupe el alto */
+}
