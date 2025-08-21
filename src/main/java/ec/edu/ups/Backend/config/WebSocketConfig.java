@@ -17,7 +17,7 @@ public class WebSocketConfig implements WebSocketConfigurer {
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         try {
             registry.addHandler(shellWebSocketHandler(), "/ws/shell")
-                    .setAllowedOrigins("*"); // Permitir cualquier origen
+                    .setAllowedOriginPatterns("*"); // en lugar de setAllowedOrigins("*")
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
