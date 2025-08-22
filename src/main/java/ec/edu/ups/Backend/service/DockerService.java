@@ -315,6 +315,10 @@ public class DockerService {
 
             // Buscar instancia
             Optional<OdooInstance> optionalInstance = odooInstanceRepository.findByNameAndCategoryAndProjectId(instanceName, category, projectId);
+            System.out.println(" instanceName " + instanceName);
+            System.out.println(" category " + category);
+            System.out.println(" projectId " + projectId);
+            System.out.println(" optionalInstance " + optionalInstance);
             if (optionalInstance.isEmpty()) return "❌ Error: Instancia no encontrada.";
             OdooInstance instance = optionalInstance.get();
             int port = instance.getPort();
@@ -329,20 +333,24 @@ public class DockerService {
 
             File repoDir = new File(repoPath);
 
-            // Clonar repositorio si no existe
-            if (!repoDir.exists()) {
-                String gitCloneCmd = String.format("git clone -b %s %s \"%s\"", branchName, repoUrl, repoPath);
-                System.out.println("gitCloneCmd: " + gitCloneCmd);
-                if (!executeCommand(new String[]{"cmd.exe", "/c", gitCloneCmd})) {
-                    return "❌ Error al clonar el repositorio desde GitHub.";
-                }
+            // 🧹 Si ya existe la carpeta, eliminarla para forzar clonado limpio
+            if (repoDir.exists()) {
+                System.out.println("🧹 Eliminando carpeta existente del repositorio: " + repoDir.getAbsolutePath());
+                deleteDirectoryRecursively(repoDir);
+            }
+
+            // Clonar repositorio
+            String gitCloneCmd = String.format("git clone -b %s %s \"%s\"", branchName, repoUrl, repoPath);
+            System.out.println("gitCloneCmd: " + gitCloneCmd);
+            if (!executeCommand(new String[]{"cmd.exe", "/c", gitCloneCmd})) {
+                return "❌ Error al clonar el repositorio desde GitHub.";
             }
 
             // 📂 Mostrar estructura del repo clonado
             System.out.println("📁 Explorando contenido del repo clonado:");
             printDirectoryStructure(repoDir, 0);
 
-            // Buscar y validar carpeta custom_addons (incluso si ya existe pero está vacía)
+            // Buscar y validar carpeta custom_addons
             File customAddons = new File(customAddonsPath);
             boolean addonsExist = customAddons.exists() && customAddons.isDirectory()
                     && customAddons.listFiles(File::isDirectory) != null
@@ -350,6 +358,8 @@ public class DockerService {
 
             if (!addonsExist) {
                 File found = findCustomAddonsRecursively(repoDir);
+                System.out.println("found  " + found);
+
                 if (found != null && !found.getAbsolutePath().equalsIgnoreCase(customAddonsPath)) {
                     Files.createDirectories(Paths.get(customAddonsPath).getParent());
                     Files.move(found.toPath(), Paths.get(customAddonsPath), StandardCopyOption.REPLACE_EXISTING);
@@ -408,6 +418,21 @@ public class DockerService {
             return "❌ Error inesperado al instalar módulos: " + e.getMessage();
         }
     }
+
+    private void deleteDirectoryRecursively(File dir) throws IOException {
+        if (dir.isDirectory()) {
+            File[] entries = dir.listFiles();
+            if (entries != null) {
+                for (File entry : entries) {
+                    deleteDirectoryRecursively(entry);
+                }
+            }
+        }
+        if (!dir.delete()) {
+            throw new IOException("No se pudo eliminar: " + dir.getAbsolutePath());
+        }
+    }
+
 
 
     private File findCustomAddonsRecursively(File dir) {
@@ -1094,9 +1119,12 @@ public class DockerService {
 /// /----------------------------------------------------------
     //MERGE GENERAL
 
-public String mergeOdooInstances(String sourceInstance, String targetInstance, Long projectId) {
+    public String mergeOdooInstances(String sourceInstance, String targetInstance, Long projectId) {
     try {
         System.out.println("🔁 Iniciando merge de Git desde " + sourceInstance + " hacia " + targetInstance);
+        System.out.println("sourceInstance  " + sourceInstance);
+        System.out.println("targetInstance " + targetInstance);
+        System.out.println("projectId " + projectId);
 
         // Buscar proyecto y usuario
         Optional<Project> optionalProject = projectRepository.findById(projectId);
@@ -1104,26 +1132,33 @@ public String mergeOdooInstances(String sourceInstance, String targetInstance, L
         Project project = optionalProject.get();
         User user = project.getUser();
 
-        // Definir ramas y nombres
+        // Detectar categoría a partir del nombre de la instancia
+        String sourceCategory = detectCategoryFromInstanceName(sourceInstance);
+        String targetCategory = detectCategoryFromInstanceName(targetInstance);
+        if (sourceCategory == null || targetCategory == null) {
+            return "❌ No se pudo determinar la categoría de una o ambas instancias.";
+        }
+
+        // Ramas Git dinámicas
+        String sourceBranch = sourceCategory + "-" + sourceInstance;
+        String targetBranch = targetCategory + "-" + targetInstance;
+
         String repoUrl = "https://github.com/" + user.getUsername() + "/" + project.getName() + ".git";
         String repoPath = "C:\\odoo-modules\\merge_" + sourceInstance + "_to_" + targetInstance;
-        String sourceBranch = "development-" + sourceInstance;
-        String targetBranch = "staging-" + targetInstance;
-
         File repoDir = new File(repoPath);
 
-        // Eliminar el directorio si ya existe (limpieza previa)
+        // Limpieza previa
         if (repoDir.exists()) {
             FileUtils.deleteDirectory(repoDir);
         }
 
-        // Clonar el repositorio (con la rama destino como base)
+        // Clonar la rama destino
         String cloneCmd = String.format("git clone -b %s %s \"%s\"", targetBranch, repoUrl, repoPath);
         if (!executeCommand(new String[]{"cmd.exe", "/c", cloneCmd})) {
             return "❌ Error al clonar la rama destino desde GitHub.";
         }
 
-        // Merge desde la rama source
+        // Hacer merge
         if (!executeCommand(new String[]{"cmd.exe", "/c", "git checkout " + targetBranch}, repoDir)) {
             return "❌ Error al hacer checkout de la rama destino.";
         }
@@ -1136,18 +1171,25 @@ public String mergeOdooInstances(String sourceInstance, String targetInstance, L
             return "❌ Error al hacer push de la rama fusionada.";
         }
 
-        // ✅ Reexplorar custom_addons después del merge
+        // Validar custom_addons
         String mergedCustomAddonsPath = repoPath + "/custom_addons";
         File mergedCustomAddonsDir = new File(mergedCustomAddonsPath);
 
         if (mergedCustomAddonsDir.exists() && mergedCustomAddonsDir.isDirectory()) {
-            // Verificar si hay al menos un módulo válido con __manifest__.py
             boolean hasValidModules = Arrays.stream(Objects.requireNonNull(mergedCustomAddonsDir.listFiles()))
                     .anyMatch(f -> new File(f, "__manifest__.py").exists());
 
             if (hasValidModules) {
                 System.out.println("📦 Se encontraron módulos válidos después del merge. Iniciando instalación...");
-                String installResult = installCustomModules(targetInstance, mergedCustomAddonsPath, projectId);
+                System.out.println(" sourceBranch "+sourceBranch);
+                System.out.println(" targetBranch "+targetBranch);
+                System.out.println(" mergedCustomAddonsPath "+mergedCustomAddonsPath);
+
+
+
+                String installResult = installCustomModules(targetInstance, targetCategory.toUpperCase(), projectId);
+                System.out.println("📥 Instalando en instancia: " + targetBranch + " (Categoría: " + targetCategory + ")");
+
                 System.out.println("📦 Resultado instalación módulos: " + installResult);
             } else {
                 System.out.println("ℹ️ custom_addons está presente pero sin módulos válidos (__manifest__.py)");
@@ -1163,6 +1205,14 @@ public String mergeOdooInstances(String sourceInstance, String targetInstance, L
         return "❌ Error inesperado durante el merge: " + e.getMessage();
     }
 }
+
+    private String detectCategoryFromInstanceName(String instanceName) {
+        String lower = instanceName.toLowerCase();
+        if (lower.contains("development")) return "development";
+        if (lower.contains("staging")) return "staging";
+        if (lower.contains("production")) return "production";
+        return null;
+    }
 
 
 
